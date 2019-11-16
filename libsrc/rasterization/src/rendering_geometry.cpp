@@ -2,6 +2,8 @@
 
 namespace plane_render {
 
+const Vector3D RenderingGeometry::UP{0.f, 1.f, 0.f};
+
 RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov) :
         rotation_(TransformMatrix::Identity()),
         screen_width_(w), screen_height_(h), pixels_count_(w*h), n_(n_p), f_(f_p), fov_(fov)
@@ -10,19 +12,20 @@ RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float
     DCHECK(n_ > 0 && f_ > 0 && n_ < f_);
 
     // Считаем перспективу 1 раз
-    //perspective_.col(0) << n_ / screen_width_, 0, 0, 0;
-    //perspective_.col(1) << 0, n_ / screen_height_, 0, 0;
-//    perspective_.col(2) << 0, 0, (n_ + f_) / (n_ - f_), 1;
-//    perspective_.col(3) << 0, 0, 2/(1/f_ - 1/n_), 0;
-
-
     float ratio = static_cast<float>(screen_width_) / screen_height_;
-    perspective_.col(0) << -1.f/std::tan(fov_), 0, 0, 0;
-    perspective_.col(1) << 0, -ratio/std::tan(fov_), 0, 0;
-    perspective_.col(2) << 0, 0, (n_ + f_) / (n_ - f_), 2/(1/f_ - 1/n_), 0;
-    perspective_.col(3) << 0, 0, 1.f, 0;
+    perspective_.col(0) << 1.f / std::tan(fov_), 0, 0, 0;
+    perspective_.col(1) << 0, ratio / std::tan(fov_), 0, 0;
+    perspective_.col(2) << 0, 0, (n_ + f_) / (n_ - f_), 1;
+    perspective_.col(3) << 0, 0, 2/(1/f_ - 1/n_), 0;
 
     UpdateTransformMatrices();
+}
+
+void RenderingGeometry::LookAt(const Vector3D& pos, const RotationAngles& angles)
+{
+    camera_pos_ = pos;
+    rotation_ = TransformMatrix::Identity();
+    Rotate(angles);
 }
 
 void RenderingGeometry::UpdateTransformMatrices()
@@ -30,7 +33,7 @@ void RenderingGeometry::UpdateTransformMatrices()
     // Трансляция
     TransformMatrix motion = TransformMatrix::Identity();
     motion.col(3) << -camera_pos_.x, -camera_pos_.y, -camera_pos_.z, 1;
-    result_transform_ = perspective_ * motion * rotation_;
+    result_transform_ = perspective_ * rotation_ * motion;
 }
 
 void RenderingGeometry::Rotate(const RotationAngles& rot)
@@ -39,9 +42,8 @@ void RenderingGeometry::Rotate(const RotationAngles& rot)
 
     float cos_t = cos(rot.theta), sin_t = sin(rot.theta);
     float sin_f = sin(rot.phi), cos_f = cos(rot.phi);
-    Vector3D up = { 0, 1, 0 };
     Vector3D e3_rot = { cos_t*sin_f, sin_t, cos_t*cos_f };
-    Vector3D e1_rot = up.Cross(e3_rot).Normalized();
+    Vector3D e1_rot = UP.Cross(e3_rot).Normalized();
     Vector3D e2_rot = e3_rot.Cross(e1_rot).Normalized();
 
     curr_rotation_matrix.row(0) << e1_rot.x, e1_rot.y, e1_rot.z, 0;

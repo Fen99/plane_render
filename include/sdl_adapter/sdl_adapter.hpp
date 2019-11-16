@@ -18,11 +18,10 @@ public:
     SDLAdapter(const SDLAdapter&) = delete;
     SDLAdapter& operator=(const SDLAdapter&) = delete;
 
+    void DrawScreen();
+
     void MessageLoop();
     ~SDLAdapter();
-
-private:
-    void DrawScreen();
 
 private:
     RasterizationPipelinePtr pipeline_;

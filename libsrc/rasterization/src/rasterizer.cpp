@@ -125,16 +125,6 @@ void Rasterizer::RasterizeTriangle(const SceneObject& obj, ScreenDimension min_l
              z_buffer_[idx] = dzeta_avg;
 
          // Отправляем точку во фрагментный шейдер
-         /*if (avg_vertex.vreg.properties.texture_coords.x > 1 || avg_vertex.vreg.properties.texture_coords.y > 1)
-         {
-             std::cout << ">>> " << vert1.vreg.properties.texture_coords.x << " " << vert1.vreg.properties.texture_coords.y << std::endl;
-             std::cout << ">>> " << vert2.vreg.properties.texture_coords.x << " " << vert2.vreg.properties.texture_coords.y << std::endl;
-             std::cout << ">>> " << vert3.vreg.properties.texture_coords.x << " " << vert3.vreg.properties.texture_coords.y << std::endl;
-             std::cout << "wb>>> " << world_bc.a << " " << world_bc.b << " " << world_bc.c << std::endl;
-             std::cout << "sc>>> " << screen_bc.a << " " << screen_bc.b << " " << screen_bc.c << std::endl;
-             std::cout << "z>>> " << vert1.vreg.position.z << " " << vert2.vreg.position.z << " " << vert3.vreg.position.z << std::endl;
-             std::cout << ">><<" << std::endl; 
-         }*/
          pixels_[idx] = fs.ProcessFragment(avg_vertex);
          //pixels_[CalcIndex(curr_point)] = tri_color;
      }

@@ -57,7 +57,16 @@ void RasterizationPipeline::Update()
     auto const t1 = std::chrono::system_clock::now();
     std::chrono::duration<double, std::milli> const vs = tv - t0;
     std::chrono::duration<double, std::milli> const fs = t1 - tv;
-    std::cout << vs.count() << "; " << fs.count() << "; sum = " << (vs+fs).count() << std::endl;
+    sum_time_.first += vs.count();
+    sum_time_.second += fs.count();
+    iterations_++;
+
+    std::cout << iterations_ << ": " << vs.count() << "; " << fs.count() << "; sum = " << (vs+fs).count() << std::endl;
+    if (iterations_ > 0 && iterations_ % 100 == 0)
+    {
+        std::cout << "Avg. after " << iterations_ << " iterations: " << sum_time_.first / iterations_ << "; " <<
+                     sum_time_.second / iterations_ << "; sum_avg = " << (sum_time_.first + sum_time_.second) / iterations_ << std::endl;
+    }
 }
 
 } // namespace plane_render

@@ -5,27 +5,31 @@
 
 namespace plane_render {
 
-FragmentShader::FragmentShader(const RenderingGeometryConstPtr& geom, int light_n) :
+FragmentShader::FragmentShader(const RenderingGeometryConstPtr& geom, size_t light_n) :
     geom_(geom),
     lightN_(light_n)
 {}
 
 Color FragmentShader::ProcessFragment(const Vertex& avg_vertex) const
 {
-    Vector3D light = (geom_->LightPos() - avg_vertex.vreg.position);
-    Vector3D cam = (geom_->CameraPos() - avg_vertex.vreg.position);
+    const Vector3D light = (geom_->LightPos() - avg_vertex.vreg.position);
+    const Vector3D cam = (geom_->CameraPos() - avg_vertex.vreg.position);
 
-    float diff = std::abs(cam.Dot(light) / std::sqrt(light.NormSq() * cam.NormSq()));
-    Vector3D h = (light + cam);
-    float prod = h.Dot(avg_vertex.vreg.properties.normal) / std::sqrt(h.NormSq() * avg_vertex.vreg.properties.normal.NormSq());
-    float spec = std::pow(std::abs(prod), lightN_);
+    const float normal_normsq = avg_vertex.vreg.properties.normal.NormSq();
+    const float diff = std::max(avg_vertex.vreg.properties.normal.Dot(light) / std::sqrt(light.NormSq() * normal_normsq), 0.f);
 
-    float light_intens = Clump(0.2f + 0.4f*diff + 0.4f*spec, 0.f, 1.f);
-    // FIXME! Временно, для отладки
-    //if (texture_)
-        return texture_.GetPoint(avg_vertex.vreg.properties.texture_coords) * light_intens;
-    //else
-    //    return { 0, (Color::ColorElement) (255*light_intens) };
+    const Vector3D h = (light + cam);
+    const float prod = std::max(h.Dot(avg_vertex.vreg.properties.normal) / std::sqrt(h.NormSq() * normal_normsq), 0.f);
+
+    // Убивает производительность!
+    //float spec = std::pow(prod, lightN_);  
+    float spec = 1.f;
+    for (size_t i = 0; i < lightN_; i++)
+        spec *= prod;
+
+    const float light_intens = 0.2f + 0.4f*diff + 0.4f*spec;
+    return texture_.GetPoint(avg_vertex.vreg.properties.texture_coords) * light_intens;
+    // return { 0, (Color::ColorElement) (255*light_intens) };
 }
 
 void FragmentShader::LoadTexture(const std::string& name)

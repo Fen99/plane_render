@@ -22,10 +22,12 @@ public:
     typedef Eigen::Matrix<ScreenDimension, 2, Eigen::Dynamic> PixelsMatrix;
 
 public:
-    RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov = 1.0);
+    RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov);
 
     void Move(const Vector3D& mov);
     void Rotate(const RotationAngles& rot);
+    
+    void LookAt(const Vector3D& pos, const RotationAngles& angles);
 
     // Преобразование геометрии для вершинных шейдеров
     // Возвращает <min_row, max_row> - границы строк, содержащих объект
@@ -46,6 +48,9 @@ private:
     void UpdateTransformMatrices();
     std::pair<ScreenDimension, ScreenDimension> TransformToPixels(
         const TransformedGeometryMatrix& m, PixelsMatrix& p) const;
+
+private:
+    static const Vector3D UP;
 
 private:
     // Преобразования геометрии

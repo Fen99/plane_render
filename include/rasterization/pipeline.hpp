@@ -37,6 +37,9 @@ private:
     ThreadPool pool_;
 
     Rasterizer rasterizer_;
+
+    size_t iterations_ = 0;
+    std::pair<double, double> sum_time_ = { 0.0, 0.0 }; // vs; fs
 };
 
 typedef std::shared_ptr<RasterizationPipeline> RasterizationPipelinePtr;

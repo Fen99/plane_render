@@ -38,6 +38,11 @@ public:
         return { x - v2.x, y - v2.y, z - v2.z };
     }
 
+    inline Vector3D operator*(float val) const
+    {
+        return { x*val, y*val, z*val };
+    }
+
 public:
     float x = 0;
     float y = 0;
