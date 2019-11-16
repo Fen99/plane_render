@@ -77,15 +77,6 @@ function(build_logger)
 endfunction()
 build_logger()
 
-function(build_libpnmio)
-    set(LIBPNMIO_SRC 
-        third-party/libpnmio/src/pnmio.c
-    )
-    build_static_lib_proj(LIBPNMIO_SRC "" libpnmio)
-    target_include_directories(libpnmio PUBLIC ${ROOT_REPOSITORY_DIR}/third-party/libpnmio/src/)
-endfunction()
-build_libpnmio()
-
 # Libraries
 add_subdirectory(libsrc/common)
 add_subdirectory(libsrc/rasterization)
