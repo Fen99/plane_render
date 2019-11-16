@@ -19,9 +19,9 @@ SceneObject::SceneObject(const RenderingGeometryConstPtr& geom, const std::strin
 }
 
 SceneObject::SceneObject(SceneObject&& another) :
+    geom_(another.geom_),
     vertices_(another.vertices_),
     indices_(another.indices_),
-    geom_(another.geom_),
     vs_(another.vs_),
     fs_(another.fs_)
 {
@@ -67,6 +67,8 @@ void SceneObject::LoadMeshFile(const std::string& obj_filename, float scale)
             TextureCoords v;
             if(!(iss >> v.x >> v.y))
                 throw std::runtime_error("could not parse line: " + line);
+            if (v.x > 1 || v.y > 1)
+                throw std::runtime_error("wrong texture coords: "+line);
             tex.push_back(v);
         }
         else if(word == "vn")
@@ -83,7 +85,7 @@ void SceneObject::LoadMeshFile(const std::string& obj_filename, float scale)
             auto const vsize = vertices_.size();
             while (iss >> idx[0] >> trash >> idx[1] >> trash >> idx[2])
             {
-                if (idx[2] - 1 != -1) // FIXME: Хак, чтобы использовать этот парсер для "неполных" obj
+                if (static_cast<int>(idx[2]) - 1 != -1) // FIXME: Хак, чтобы использовать этот парсер для "неполных" obj
                     vertices_.emplace_back(pos[idx[0] - 1], tex[idx[1] - 1], norm[idx[2] - 1]);
                 else
                     vertices_.emplace_back(pos[idx[0] - 1], tex[idx[1] - 1], Vector3D{0, 1, 0}); // Фиктивная нормаль

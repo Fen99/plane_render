@@ -11,11 +11,6 @@
 #define CHECK_ALWAYS_COMMENT(x, comment) if(!(x)) { throw std::runtime_error(std::string("Runtime error: ")+(comment)+"; failed: "+(#x)); }
 #define CHECK_ALWAYS(x) CHECK_ALWAYS_COMMENT(x, "always checked condition")
 
-#ifdef NDEBUG
-    #undef CHECK
-    #define CHECK(x)
-#endif
-
 // Т.к. easylogging включает библиотеку, где они переопределяются
 #undef min
 #undef max

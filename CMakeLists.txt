@@ -37,17 +37,21 @@ set(INCLUDE_BASE_DIR include)
 include_directories(${INCLUDE_BASE_DIR})
 
 # Macro for building
-macro(build_static_lib src_files dependencies)
-    message("Configure lib ${PROJECT_NAME}")
+macro(build_static_lib_proj src_files dependencies proj_name)
+    message("Configure lib ${proj_name}")
     message("Src: ${${src_files}}")
     message("Dependencies: ${${dependencies}}")
 
-    add_library(${PROJECT_NAME} STATIC ${${src_files}})
+    add_library(${proj_name} STATIC ${${src_files}})
 
-    target_include_directories(${PROJECT_NAME} PRIVATE ${ROOT_REPOSITORY_DIR}/${INCLUDE_BASE_DIR}/${PROJECT_NAME})
+    target_include_directories(${proj_name} PRIVATE ${ROOT_REPOSITORY_DIR}/${INCLUDE_BASE_DIR}/${proj_name})
     if (${dependencies})
-        target_link_libraries(${PROJECT_NAME} ${${dependencies}})
+        target_link_libraries(${proj_name} ${${dependencies}})
     endif()
+endmacro(build_static_lib_proj)
+
+macro(build_static_lib src_files dependencies)
+    build_static_lib_proj(${src_files} ${dependencies} ${PROJECT_NAME})
 endmacro(build_static_lib)
 
 macro(build_executable src_files dependencies)
@@ -73,12 +77,20 @@ function(build_logger)
 endfunction()
 build_logger()
 
-add_subdirectory(third-party/easyppm)
+function(build_libpnmio)
+    set(LIBPNMIO_SRC 
+        third-party/libpnmio/src/pnmio.c
+    )
+    build_static_lib_proj(LIBPNMIO_SRC "" libpnmio)
+    target_include_directories(libpnmio PUBLIC ${ROOT_REPOSITORY_DIR}/third-party/libpnmio/src/)
+endfunction()
+build_libpnmio()
 
 # Libraries
 add_subdirectory(libsrc/common)
 add_subdirectory(libsrc/rasterization)
 add_subdirectory(libsrc/threadpool)
+add_subdirectory(libsrc/sdl_adapter)
 
 # Projects (.so/.dll and executables)
-add_subdirectory(projects/plane_render)
+add_subdirectory(projects/base_render)

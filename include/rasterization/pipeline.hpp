@@ -14,7 +14,7 @@ private:
     static constexpr size_t ThreadsCount = 8;
 
 public:
-    RasterizationPipeline(const RenderingGeometryPtr& geom, const std::vector<std::string>& objects_names);
+    RasterizationPipeline(const RenderingGeometryPtr& geom, std::vector<SceneObject>&& objects_names);
     RasterizationPipeline(const RasterizationPipeline&) = delete;
     RasterizationPipeline& operator=(const RasterizationPipeline&) = delete;
 
@@ -26,6 +26,7 @@ public:
 
     const Color* GetPixels() const { return rasterizer_.GetPixels(); }
     size_t GetBufferSize()   const { return rasterizer_.GetBufferSize(); }
+    const std::vector<SceneObject>& GetObjects() const { return objects_; }
 
     ScreenDimension ScreenWidth()  const { return geom_->Width();  }
     ScreenDimension ScreenHeight() const { return geom_->Height(); }

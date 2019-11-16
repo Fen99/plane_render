@@ -1,5 +1,6 @@
 bin/
 lib/
+perf/
 test/
 .vs/
 *.idea*

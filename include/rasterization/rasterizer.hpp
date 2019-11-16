@@ -12,6 +12,13 @@ namespace plane_render {
 
 class Rasterizer
 {
+// Ставим сюда, чтобы inline компилировался
+private:
+    RenderingGeometryConstPtr geom_;
+
+    float* z_buffer_ = nullptr;
+    Color* pixels_ = nullptr;
+
 public:
     Rasterizer(const RenderingGeometryConstPtr& geom);
     Rasterizer(const Rasterizer&) = delete;
@@ -28,25 +35,41 @@ public:
     ~Rasterizer();
 
 private:
-    bool ValidateIndex(PixelPoint p) const;
-    size_t CalcIndex(PixelPoint p) const;
-
-    Color& At(const PixelPoint& point);
+    inline size_t CalcIndex(const PixelPoint& point) const
+    {
+        DCHECK(ValidateIndex(point));
+        return point.y*geom_->Width() + point.x;
+    }
+    inline Color& At(const PixelPoint& point) { return pixels_[CalcIndex(point)]; }
 
     void RasterizeTriangle(const SceneObject& obj, ScreenDimension min_line, ScreenDimension max_line,
                            const TriangleIndices& indices);
 
 private:
-    static BaricentricCoords ToScreenBaricentric(const PixelPoint& p, const PixelPoint& A, const PixelPoint& B,
-                                                 const PixelPoint& c);
+    inline bool ValidateIndex(const PixelPoint& point) const
+    {
+        return point.x < geom_->Width() && point.y < geom_->Height() && point.x >= 0 && point.y >= 0;
+    }
+
+    inline static BaricentricCoords ToScreenBaricentric(
+        const PixelPoint& p, const PixelPoint& A, const PixelPoint& B, const PixelPoint& C)
+    {
+        Vector3D x_vec = { (float) B.x - A.x, (float) C.x - A.x, (float) A.x - p.x };
+        Vector3D y_vec = { (float) B.y - A.y, (float) C.y - A.y, (float) A.y - p.y };
+        Vector3D cross = x_vec.Cross(y_vec);
+        return { 1.f - (cross.x+cross.y)/cross.z, cross.x/cross.z, cross.y/cross.z };
+    }
+
     // "Истинные" БЦ-координаты в мировом пространстве
-    static BaricentricCoords ToWorldBaricentric(const BaricentricCoords& screen_bc, float z1, float z2, float z3);
+    inline static BaricentricCoords ToWorldBaricentric(const BaricentricCoords& screen_bc, float z1, float z2, float z3)
+    {
+        float alphap = screen_bc.a / z1;
+        float betap  = screen_bc.b / z2;
+        float gammap = screen_bc.c / z3;
+        float summ = alphap + betap + gammap;
 
-private:
-    RenderingGeometryConstPtr geom_;
-
-    float* z_buffer_ = nullptr;
-    Color* pixels_ = nullptr;
+        return { alphap/summ, betap/summ, gammap/summ };
+    }
 };
 
 } // namespace plane_render

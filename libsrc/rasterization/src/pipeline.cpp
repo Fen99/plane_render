@@ -8,17 +8,12 @@
 namespace plane_render {
 
 RasterizationPipeline::RasterizationPipeline(const RenderingGeometryPtr& geom,
-                                             const std::vector<std::string>& objects_names) :
+                                             std::vector<SceneObject>&& objects) :
     geom_(geom),
+    objects_(std::move(objects)),
     pool_(ThreadsCount),
     rasterizer_(geom_)
-{
-    for (const auto& name : objects_names)
-    {
-        objects_.emplace_back(geom_, name, 100);
-        objects_.back().SetShaders<VertexShader, FragmentShader>();
-    }
-}
+{}
 
 void RasterizationPipeline::CameraMove(float dx, float dy, float dz)
 {

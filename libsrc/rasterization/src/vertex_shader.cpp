@@ -11,7 +11,7 @@ VertexShader::VertexShader(const VeticesVector& vertices, const RenderingGeometr
     vecs3d_transformed_(3, vertices.size()),
     pixel_points_(2, vertices.size())
 {
-    CHECK(geom_);
+    DCHECK(geom_);
     for (size_t i = 0; i < vertices.size(); i++)
     {
         const auto& vert_pos = vertices[i].vreg.position;
@@ -19,18 +19,6 @@ VertexShader::VertexShader(const VeticesVector& vertices, const RenderingGeometr
     }
     
     Update();
-}
-
-const Vector3D* VertexShader::GetPoint(size_t index) const
-{
-    CHECK((int) index < vecs3d_transformed_.cols());
-    return reinterpret_cast<const Vector3D*>(vecs3d_transformed_.data() + index*(sizeof(Vector3D)/sizeof(float)));
-};
-
-const PixelPoint* VertexShader::GetAsPixelPoint(size_t index) const
-{
-    CHECK((int) index < pixel_points_.cols());
-    return reinterpret_cast<const PixelPoint*>(pixel_points_.data() + index*(sizeof(PixelPoint)/sizeof(ScreenDimension)));
 }
 
 void VertexShader::Update()

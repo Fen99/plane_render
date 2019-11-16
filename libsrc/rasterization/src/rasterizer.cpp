@@ -15,7 +15,7 @@ namespace plane_render {
 Rasterizer::Rasterizer(const RenderingGeometryConstPtr& geom) :
     geom_(geom)
 {
-    CHECK(geom_);
+    DCHECK(geom_);
 
     pixels_ = new Color[geom_->PixelsCount()];
     z_buffer_ = new float[geom_->PixelsCount()];
@@ -37,25 +37,9 @@ void Rasterizer::Clear()
     memset(pixels_, 0, geom_->PixelsCount() *sizeof(Color));
 }
 
-bool Rasterizer::ValidateIndex(PixelPoint point) const
-{
-    return point.x < geom_->Width() && point.y < geom_->Height() && point.x >= 0 && point.y >= 0;
-}
-
-size_t Rasterizer::CalcIndex(PixelPoint point) const
-{
-    CHECK(ValidateIndex(point));
-    return point.y*geom_->Width() + point.x;
-}
-
-Color& Rasterizer::At(const PixelPoint& point)
-{
-    return pixels_[CalcIndex(point)];
-}
-
 void Rasterizer::Rasterize(const SceneObject& object, ScreenDimension min_line, ScreenDimension max_line)
 {
-    CHECK(min_line >= 0 && max_line >= 0 && min_line < geom_->Height() && max_line < geom_->Height() &&
+    DCHECK(min_line >= 0 && max_line >= 0 && min_line < geom_->Height() && max_line < geom_->Height() &&
           min_line <= max_line);
 
     const auto& vs = *object.GetVS();
@@ -63,34 +47,16 @@ void Rasterizer::Rasterize(const SceneObject& object, ScreenDimension min_line, 
         return;
 
     const auto& indices = object.Indices();
-    CHECK(indices.size() % 6 == 0); // Треугольник - 3 линии
+    DCHECK(indices.size() % 6 == 0); // Треугольник - 3 линии
 
     for (size_t i = 0; i < indices.size() / 6; i++)
     {
         // Проверяем, что точки действительно образуют треугольник
-        CHECK(indices[i*6+1] == indices[i*6+2] &&
-                indices[i*6+3] == indices[i*6+4] &&
-                indices[i*6+5] == indices[i*6]);
+        DCHECK(indices[i*6+1] == indices[i*6+2] &&
+              indices[i*6+3] == indices[i*6+4] &&
+              indices[i*6+5] == indices[i*6]);
         RasterizeTriangle(object, min_line, max_line, { indices[i*6], indices[i*6+1], indices[i*6+3] });
     }
-}
-
-BaricentricCoords Rasterizer::ToScreenBaricentric(const PixelPoint& p, const PixelPoint& A, const PixelPoint& B, const PixelPoint& C)
-{
-    Vector3D x_vec = { (float) B.x - A.x, (float) C.x - A.x, (float) A.x - p.x };
-    Vector3D y_vec = { (float) B.y - A.y, (float) C.y - A.y, (float) A.y - p.y };
-    Vector3D cross = x_vec.Cross(y_vec);
-    return { 1.f - (cross.x+cross.y)/cross.z, cross.x/cross.z, cross.y/cross.z };
-}
-
-BaricentricCoords Rasterizer::ToWorldBaricentric(const BaricentricCoords& screen_bc, float z1, float z2, float z3)
-{
-    float alphap = screen_bc.a / z1;
-    float betap  = screen_bc.b / z2;
-    float gammap = screen_bc.c / z3;
-    float summ = alphap + betap + gammap;
-
-    return { alphap/summ, betap/summ, gammap/summ };
 }
 
 void Rasterizer::RasterizeTriangle(const SceneObject& obj, ScreenDimension min_line, ScreenDimension max_line,
@@ -141,20 +107,34 @@ void Rasterizer::RasterizeTriangle(const SceneObject& obj, ScreenDimension min_l
          //    continue;
 
          BaricentricCoords screen_bc = ToScreenBaricentric(curr_point, p1_px, p2_px, p3_px);
-         if (!screen_bc.IsValid())
-             continue;
-         BaricentricCoords world_bc = ToWorldBaricentric(screen_bc, vert1.vreg.position.z, vert2.vreg.position.z, 
-                                                         vert3.vreg.position.z);
+         //if (!screen_bc.IsValid())
+         //    continue;
+         BaricentricCoords world_bc = screen_bc;
+         //BaricentricCoords world_bc = ToWorldBaricentric(screen_bc, vert1.vreg.position.z, vert2.vreg.position.z, 
+         //                                                vert3.vreg.position.z);
+         if (!world_bc.IsValid())
+            continue;
 
          // Проверяем, видна ли поверхность
          Vertex avg_vertex = FragmentShader::AgregateVertices(world_bc, vert1, vert2, vert3);
          float dzeta_avg = world_bc.a*v1_3d.z + world_bc.b*v2_3d.z + world_bc.c*v3_3d.z;
+         //float dzeta_avg = screen_bc.a*v1_3d.z + screen_bc.b*v2_3d.z + screen_bc.c*v3_3d.z;
          if (dzeta_avg <= z_buffer_[idx])
              continue;
          else
              z_buffer_[idx] = dzeta_avg;
 
          // Отправляем точку во фрагментный шейдер
+         /*if (avg_vertex.vreg.properties.texture_coords.x > 1 || avg_vertex.vreg.properties.texture_coords.y > 1)
+         {
+             std::cout << ">>> " << vert1.vreg.properties.texture_coords.x << " " << vert1.vreg.properties.texture_coords.y << std::endl;
+             std::cout << ">>> " << vert2.vreg.properties.texture_coords.x << " " << vert2.vreg.properties.texture_coords.y << std::endl;
+             std::cout << ">>> " << vert3.vreg.properties.texture_coords.x << " " << vert3.vreg.properties.texture_coords.y << std::endl;
+             std::cout << "wb>>> " << world_bc.a << " " << world_bc.b << " " << world_bc.c << std::endl;
+             std::cout << "sc>>> " << screen_bc.a << " " << screen_bc.b << " " << screen_bc.c << std::endl;
+             std::cout << "z>>> " << vert1.vreg.position.z << " " << vert2.vreg.position.z << " " << vert3.vreg.position.z << std::endl;
+             std::cout << ">><<" << std::endl; 
+         }*/
          pixels_[idx] = fs.ProcessFragment(avg_vertex);
          //pixels_[CalcIndex(curr_point)] = tri_color;
      }
