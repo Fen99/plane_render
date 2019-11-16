@@ -9,7 +9,7 @@ namespace plane_render {
 class FragmentShader
 {
 public:
-    FragmentShader(const RenderingGeometryConstPtr& info);
+    FragmentShader(const RenderingGeometryConstPtr& info, int light_n = 3);
     FragmentShader(const FragmentShader&) = delete;
     FragmentShader& operator=(const FragmentShader&) = delete;
     virtual ~FragmentShader() {}
@@ -30,7 +30,7 @@ private:
     Texture texture_;
 
 private:
-    static constexpr int lightN_ = 50;
+    int lightN_ = 3;
 };
 
 } // namespace plane_render

@@ -22,7 +22,7 @@ public:
     typedef Eigen::Matrix<ScreenDimension, 2, Eigen::Dynamic> PixelsMatrix;
 
 public:
-    RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p);
+    RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov = 1.0);
 
     void Move(const Vector3D& mov);
     void Rotate(const RotationAngles& rot);
@@ -59,10 +59,11 @@ private:
     // Геометрия экрана
     ScreenDimension screen_width_ = 0;
     ScreenDimension screen_height_ = 0;
-    size_t pixels_count_; // w*h
+    size_t pixels_count_ = 0; // w*h
 
-    float n_; // Ближний план 
-    float f_; // Дальный план
+    float n_ = 0; // Ближний план 
+    float f_ = 0; // Дальный план
+    float fov_ = 1.0;
 };
 
 typedef std::shared_ptr<RenderingGeometry> RenderingGeometryPtr;

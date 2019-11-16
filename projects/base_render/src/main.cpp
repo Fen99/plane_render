@@ -15,12 +15,15 @@ int main(int argc, char* argv[])
     if (argc < 3)
         throw std::invalid_argument(std::string("Usage: ./")+argv[0]+" <obj_name> <ppm_name>");
 
-    plane_render::RenderingGeometryPtr geom = std::make_shared<plane_render::RenderingGeometry>(Width, Height, 700, 1000);
-    geom->Move({0, 0, 500});
-    geom->SetLightPos({0, 0, 200});
+//    plane_render::RenderingGeometryPtr geom = std::make_shared<plane_render::RenderingGeometry>(Width, Height, 700, 1000);
+//    geom->Move({0, 0, 500});
+//    geom->SetLightPos({100, 100, 300});
+    plane_render::RenderingGeometryPtr geom = std::make_shared<plane_render::RenderingGeometry>(Width, Height, 0.1, 10);
+    geom->Move({0, 0.3, 10});
+    geom->SetLightPos({1, 1, 3});
 
     std::vector<plane_render::SceneObject> objects;
-    objects.emplace_back(geom, argv[1], 100);
+    objects.emplace_back(geom, argv[1]);
     objects.back().SetShaders<plane_render::VertexShader, plane_render::FragmentShader>();
     objects.back().GetFS()->LoadTexture(argv[2]);
 

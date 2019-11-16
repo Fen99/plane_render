@@ -46,8 +46,8 @@ void SDLAdapter::DrawScreen()
 void SDLAdapter::MessageLoop()
 {
     constexpr float speed_rot  = 100; // pix / rad
-    constexpr float speed_keys_move = 10;
-    constexpr float mouse_roll_speed = 20;
+    constexpr float speed_keys_move = 0.1;
+    constexpr float mouse_roll_speed = 0.2;
 
     bool done = false;
     while (!done)

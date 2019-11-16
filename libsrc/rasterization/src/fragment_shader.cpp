@@ -5,8 +5,9 @@
 
 namespace plane_render {
 
-FragmentShader::FragmentShader(const RenderingGeometryConstPtr& geom) :
-    geom_(geom)
+FragmentShader::FragmentShader(const RenderingGeometryConstPtr& geom, int light_n) :
+    geom_(geom),
+    lightN_(light_n)
 {}
 
 Color FragmentShader::ProcessFragment(const Vertex& avg_vertex) const
@@ -19,7 +20,7 @@ Color FragmentShader::ProcessFragment(const Vertex& avg_vertex) const
     float prod = h.Dot(avg_vertex.vreg.properties.normal) / std::sqrt(h.NormSq() * avg_vertex.vreg.properties.normal.NormSq());
     float spec = std::pow(std::abs(prod), lightN_);
 
-    float light_intens = Clump(0.2f + 0.3f*diff + 0.5f*spec, 0.f, 1.f);
+    float light_intens = Clump(0.2f + 0.4f*diff + 0.4f*spec, 0.f, 1.f);
     // FIXME! Временно, для отладки
     //if (texture_)
         return texture_.GetPoint(avg_vertex.vreg.properties.texture_coords) * light_intens;

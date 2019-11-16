@@ -2,24 +2,25 @@
 
 namespace plane_render {
 
-RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p) :
+RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov) :
         rotation_(TransformMatrix::Identity()),
-        screen_width_(w), screen_height_(h), pixels_count_(w*h), n_(n_p), f_(f_p)
+        screen_width_(w), screen_height_(h), pixels_count_(w*h), n_(n_p), f_(f_p), fov_(fov)
 {
     DCHECK(w > 0 && h > 0);
     DCHECK(n_ > 0 && f_ > 0 && n_ < f_);
 
     // Считаем перспективу 1 раз
-    perspective_.col(0) << n_ / screen_width_, 0, 0, 0;
-    perspective_.col(1) << 0, n_ / screen_height_, 0, 0;
+    //perspective_.col(0) << n_ / screen_width_, 0, 0, 0;
+    //perspective_.col(1) << 0, n_ / screen_height_, 0, 0;
+//    perspective_.col(2) << 0, 0, (n_ + f_) / (n_ - f_), 1;
+//    perspective_.col(3) << 0, 0, 2/(1/f_ - 1/n_), 0;
 
-//    float fov = 1;
-//    float ratio = static_cast<float>(screen_width_) / screen_height_;
 
-//    perspective_.col(0) << 1.f/std::tan(fov), 0, 0, 0;
-//    perspective_.col(1) << 0, ratio/std::tan(fov), 0, 0;
-    perspective_.col(2) << 0, 0, (n_ + f_) / (n_ - f_), 1;
-    perspective_.col(3) << 0, 0, 2/(1/f_ - 1/n_), 0;
+    float ratio = static_cast<float>(screen_width_) / screen_height_;
+    perspective_.col(0) << -1.f/std::tan(fov_), 0, 0, 0;
+    perspective_.col(1) << 0, -ratio/std::tan(fov_), 0, 0;
+    perspective_.col(2) << 0, 0, (n_ + f_) / (n_ - f_), 2/(1/f_ - 1/n_), 0;
+    perspective_.col(3) << 0, 0, 1.f, 0;
 
     UpdateTransformMatrices();
 }
