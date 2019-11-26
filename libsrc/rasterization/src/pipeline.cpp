@@ -46,11 +46,11 @@ void RasterizationPipeline::Update()
         size_t triang_count = ind_count / 3;
         size_t triangles_per_thread = triang_count / ThreadsCount + 1; // +1, чтобы точно все нарисовались
 
-        for (size_t st = 0; st < triangles_per_thread; st += TrianglesPerTask)
+        for (size_t st = 0; st < triangles_per_thread; st += obj.TrianglesPerTask())
          for (size_t th = 0; th < ThreadsCount; th++)
          {
              size_t start = th*triangles_per_thread + st; // Номер первого треугольника
-             size_t count = TrianglesPerTask; // Сколько треугольников
+             size_t count = obj.TrianglesPerTask(); // Сколько треугольников
              if (start + count > (th+1)*triangles_per_thread) // Залезли уже на чужую территорию
                 count = (th+1)*triangles_per_thread - start;
 

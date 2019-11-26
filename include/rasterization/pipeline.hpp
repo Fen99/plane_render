@@ -12,7 +12,6 @@ class RasterizationPipeline
 {
 private:
     static constexpr size_t ThreadsCount = 8;
-    static constexpr size_t TrianglesPerTask = 1000;
 
 public:
     RasterizationPipeline(const RenderingGeometryPtr& geom, std::vector<SceneObject>&& objects_names);

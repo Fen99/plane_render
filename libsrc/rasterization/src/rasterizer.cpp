@@ -30,7 +30,7 @@ void Rasterizer::Rasterize(const SceneObject& obj, size_t start, size_t count)
         const auto& A = vertices[indices[s]];
         const auto& B = vertices[indices[s+1]];
         const auto& C = vertices[indices[s+2]];
-        if (A.vertex_coords.z > -GraphicsEps || A.vertex_coords.z > -GraphicsEps || C.vertex_coords.z > -GraphicsEps)
+        if (A.vertex_coords.z > -GraphicsEps || B.vertex_coords.z > -GraphicsEps || C.vertex_coords.z > -GraphicsEps)
             continue;
         RasterizeTriangle(obj, A, B, C);
     }

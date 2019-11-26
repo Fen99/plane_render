@@ -28,15 +28,17 @@ public:
         virtual void Update(); // Берет информацию из RenderingInfo о движении камеры
 
     protected:
-        SceneObject* associated_object_;
+        SceneObject* associated_object_ = nullptr;
         friend class SceneObject;
     };
 
 public:
-    SceneObject(const RenderingGeometryConstPtr& geom, const std::string& obj_filename, float scale = 1.0);
+    SceneObject(const RenderingGeometryConstPtr& geom, const std::string& obj_filename, float scale = 1.0,
+                size_t triangles_per_task = 1000);
     SceneObject(SceneObject&& another);
     ~SceneObject();
 
+    SceneObject& operator=(SceneObject&&) = delete;
     SceneObject& operator=(const SceneObject&) = delete;
     SceneObject(const SceneObject&) = delete;
 
@@ -54,6 +56,7 @@ public:
     const IndicesList&    Indices()  const { return indices_;  }
     const VerticesVector& Vertices() const { return vertices_; }
 
+    size_t TrianglesPerTask() const { return triangles_per_task_; } // Индивидуально для каждого объекта
     const VertexShader*   GetVS() const { return vs_; }
     const FragmentShader* GetFS() const { return fs_; }
     FragmentShader* GetFS() { return fs_; } // Для работы с текстурами и т.п.
@@ -67,6 +70,8 @@ private:
     Vec4DynamicArray vert_src_coords_; // Координаты из меша
     VerticesVector vertices_; // Свойства вершин для растеризатора (меняются на каждой итерации)
     IndicesList indices_;
+
+    const size_t triangles_per_task_ = 0;
 
     VertexShader* vs_   = nullptr;
     FragmentShader* fs_ = nullptr;

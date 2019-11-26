@@ -17,7 +17,7 @@ public:
 
     void Move(const Vector3D& mov);
     void Rotate(const RotationAngles& rot);
-    
+
     void LookAt(const Vector3D& pos, const RotationAngles& angles);
 
     // Преобразование геометрии для вершинных шейдеров
@@ -60,7 +60,7 @@ private:
     ScreenDimension screen_width_ = 0;
     ScreenDimension screen_height_ = 0;
 
-    float n_ = 0; // Ближний план 
+    float n_ = 0; // Ближний план
     float f_ = 0; // Дальный план
     float fov_ = 1.f;
 };

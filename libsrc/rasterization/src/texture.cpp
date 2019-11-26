@@ -110,22 +110,24 @@ void Texture::Load(const std::string& fname)
     int is_ascii = 0;
     read_ppm_header(ppm_file, &width, &height, &img_colors, &is_ascii);
     
-    CHECK((width == height) && (width % StorageBlockSide == 0));
-    side_ = width;
-    blocks_by_side_ = side_ / StorageBlockSide;
+    CHECK((width % StorageBlockSide == 0) && (height % StorageBlockSide == 0));
+    width_ = width;
+    height_ = height;
+    blocks_by_w_ = width_ / StorageBlockSide;
 
     CHECK(img_colors == 255);
     CHECK(is_ascii != 1); // binary file
-    int* texture_tmp = new int[side_*side_*3];
+    int* texture_tmp = new int[width_*height_*3];
     read_ppm_data(ppm_file, texture_tmp, is_ascii);
 
-    texture_ = new Color[side_*side_];
-    for (size_t block_id = 0; block_id < (side_*side_) / StorageBlockSize; block_id++)
+    texture_ = new Color[width_*height_];
+
+    for (size_t block_id = 0; block_id < (width_*height_) / StorageBlockSize; block_id++)
      for (size_t pos_in_block = 0; pos_in_block < StorageBlockSize; pos_in_block++)
      {
-         Point2D<size_t> pos = { StorageBlockSide*(block_id % blocks_by_side_) + (pos_in_block % StorageBlockSide),
-                                 StorageBlockSide*(block_id / blocks_by_side_) + (pos_in_block / StorageBlockSide) };
-         size_t position = (pos.y*side_ + pos.x)*3;
+         Point2D<size_t> pos = { StorageBlockSide*(block_id % blocks_by_w_) + (pos_in_block % StorageBlockSide),
+                                 StorageBlockSide*(block_id / blocks_by_w_) + (pos_in_block / StorageBlockSide) };
+         size_t position = (pos.y*width_ + pos.x)*3;
          texture_[block_id*StorageBlockSize + pos_in_block].A = 0;
          texture_[block_id*StorageBlockSize + pos_in_block].R = static_cast<Color::ColorElement>(texture_tmp[position]);
          texture_[block_id*StorageBlockSize + pos_in_block].G = static_cast<Color::ColorElement>(texture_tmp[position+1]);

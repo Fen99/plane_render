@@ -7,7 +7,7 @@
 
 namespace plane_render {
 
-// Обеспечивает доступ 
+// Обеспечивает доступ
 class ScreenBuffer
 {
 public:
@@ -20,7 +20,7 @@ public:
     public:
         static constexpr size_t INVALID_ROW = std::numeric_limits<size_t>::max();
     private:
-        size_t row_ = INVALID_ROW; 
+        size_t row_ = INVALID_ROW;
         ScreenBuffer* buffer_ = nullptr;
 
     public:
@@ -59,16 +59,16 @@ public:
         }
 
         inline Color& Pixel(size_t x)
-        { 
-            DCHECK(x < buffer_->width_ && row_ != INVALID_ROW);
-            return buffer_->pixels_[buffer_->width_*row_ + x]; 
-        }
-        inline float& Z(size_t x) 
         {
             DCHECK(x < buffer_->width_ && row_ != INVALID_ROW);
-            return buffer_->z_buffer_[buffer_->width_*row_ + x]; 
+            return buffer_->pixels_[buffer_->width_*row_ + x];
         }
-    
+        inline float& Z(size_t x)
+        {
+            DCHECK(x < buffer_->width_ && row_ != INVALID_ROW);
+            return buffer_->z_buffer_[buffer_->width_*row_ + x];
+        }
+
     private:
         Accessor(ScreenBuffer* buff);
         Accessor(const Accessor&) = delete;
@@ -81,7 +81,7 @@ public:
     ScreenBuffer(size_t w, size_t h);
     ScreenBuffer(const ScreenBuffer&) = delete;
     ScreenBuffer& operator=(const ScreenBuffer&) = delete;
-    
+
     inline Accessor GetAccessor()
     {
         return Accessor(this);
@@ -90,10 +90,10 @@ public:
     // Функция без синхронизации - должна использоваться только ПОСЛЕ растеризации
     // В debug проверяет, что все спинлоки отпущены
     void Clear();
-    
+
     const Color* GetPixels() const { return pixels_; }
     size_t GetBufferSize()   const { return width_*height_*sizeof(Color); }
-    
+
     ~ScreenBuffer();
 
 private:

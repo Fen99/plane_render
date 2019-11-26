@@ -50,7 +50,7 @@ public:
     inline Color operator*(float val) const
     {
         return { static_cast<ColorElement>(A*val),
-                 static_cast<ColorElement>(R*val), 
+                 static_cast<ColorElement>(R*val),
                  static_cast<ColorElement>(G*val),
                  static_cast<ColorElement>(B*val) };
     }
@@ -168,7 +168,7 @@ public:
         Point2D<float> CA{(float) C.x - A.x, (float) C.y - A.y};
         Point2D<float> AP{(float) A.x - p.x, (float) A.y - p.y};
         float denom = BA.x*CA.y - CA.x*BA.y;
-        
+
         float comp_b = (CA.x*AP.y - AP.x*CA.y) / denom;
         float comp_c = (AP.x*BA.y - BA.x*AP.y) / denom;
         BaricentricCoords res_new = { 1.f - comp_b - comp_c, comp_b, comp_c }; */

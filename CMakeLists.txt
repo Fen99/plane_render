@@ -85,3 +85,4 @@ add_subdirectory(libsrc/sdl_adapter)
 
 # Projects (.so/.dll and executables)
 add_subdirectory(projects/base_render)
+add_subdirectory(projects/plane_render)

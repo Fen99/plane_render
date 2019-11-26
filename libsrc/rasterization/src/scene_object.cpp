@@ -19,9 +19,10 @@ void SceneObject::VertexShader::Update()
         associated_object_->geom_->TransformGeometry(associated_object_->vert_src_coords_[i], associated_object_->vertices_[i]);
 }
 
-
-SceneObject::SceneObject(const RenderingGeometryConstPtr& geom, const std::string& obj_filename, float scale) :
-    geom_(geom)
+SceneObject::SceneObject(const RenderingGeometryConstPtr& geom, const std::string& obj_filename, float scale,
+                         size_t triangles_per_task) :
+    geom_(geom),
+    triangles_per_task_(triangles_per_task)
 {
     LoadMeshFile(obj_filename, scale);
 }
@@ -31,9 +32,13 @@ SceneObject::SceneObject(SceneObject&& another) :
     vert_src_coords_(another.vert_src_coords_),
     vertices_(another.vertices_),
     indices_(another.indices_),
+    triangles_per_task_(another.triangles_per_task_),
     vs_(another.vs_),
     fs_(another.fs_)
 {
+    // Вершинный шейдер перенастраиваем на нас
+    vs_->associated_object_ = this;
+
     another.vs_ = nullptr;
     another.fs_ = nullptr;
 }
@@ -75,8 +80,10 @@ void SceneObject::LoadMeshFile(const std::string& obj_filename, float scale)
             TextureCoords v;
             if(!(iss >> v.x >> v.y))
                 throw std::runtime_error("could not parse line: " + line);
-            if (v.x > 1 || v.y > 1)
-                throw std::runtime_error("wrong texture coords: "+line);
+            if (v.x > 1 || v.y > 1 || v.x < 0 || v.y < 0)
+                LOG(ERROR) << "wrong texture coords: "+line;
+            v.x = Clump(v.x, 0.001f, 0.999f);
+            v.y = Clump(v.y, 0.001f, 0.999f);
             tex.push_back(v);
         }
         else if(word == "vn")

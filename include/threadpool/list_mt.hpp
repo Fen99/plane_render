@@ -22,7 +22,7 @@ public:
             if (!parent_)
                 return;
 
-            parent_->locked_.store(false);
+            parent_->locked_.store(false, std::memory_order_release);
             parent_ = nullptr;
         }
 
@@ -42,7 +42,8 @@ public:
         ListMTAccessor(ListMT<T>* parent) : parent_(parent)
         {
             bool expected = false;
-            while (!parent_->locked_.compare_exchange_strong(expected, true)) // Ждем, пока сможем захватить
+            while (!parent_->locked_.compare_exchange_strong(expected, true,
+                        std::memory_order_acquire, std::memory_order_relaxed)) // Ждем, пока сможем захватить
             {
                 expected = false;
                 std::this_thread::yield();

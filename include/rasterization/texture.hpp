@@ -14,8 +14,9 @@ private:
 private:
     Color* texture_ = nullptr;
 
-    size_t side_ = 0; // Сторона текстуры
-    size_t blocks_by_side_ = 0; // Сколько блоков по каждой стороне
+    size_t width_ = 0; // Ширина текстуры
+    size_t height_ = 0; // Высота текстуры
+    size_t blocks_by_w_ = 0; // Сколько блоков по ширине
 
 public:
     Texture() {}
@@ -33,9 +34,9 @@ public:
         DCHECK(coords.x < 1 && coords.y < 1 && coords.x >= 0 && coords.y >= 0);
 
         // Точка в большом квадрате. -1 - т.к. нумерация пикселей с 0 по каждой стороне
-        Point2D<int> texture_point = { static_cast<int>(coords.x*(side_-1)), static_cast<int>((1-coords.y)*(side_-1)) };
+        Point2D<int> texture_point = { static_cast<int>(coords.x*(width_-1)), static_cast<int>((1-coords.y)*(height_-1)) };
         // Блок с данной точкой
-        size_t block_id = blocks_by_side_*(texture_point.y / StorageBlockSide) + (texture_point.x / StorageBlockSide);
+        size_t block_id = blocks_by_w_*(texture_point.y / StorageBlockSide) + (texture_point.x / StorageBlockSide);
         size_t pos_in_block = StorageBlockSide*(texture_point.y % StorageBlockSide) + (texture_point.x % StorageBlockSide);
 
         const Color& result = texture_[block_id*StorageBlockSize + pos_in_block];

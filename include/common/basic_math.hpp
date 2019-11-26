@@ -31,18 +31,18 @@ public:
 struct alignas(16) Vector4D // union внутри, чтобы можно было наследоваться
 {
 public:
-    union 
+    union
     {
         struct
         {
-            // Возможно, правильнее было бы начать с fourth - к нему был бы простой доступ (младший). 
+            // Возможно, правильнее было бы начать с fourth - к нему был бы простой доступ (младший).
             // Но это потребует заполнять матрицы в обратном порядке, что очень неприятно
             float x; // Младший, 0
             float y; // 1
             float z; // 2
             float fourth; // Старший, 3
         };
-        
+
         float vals[4]; // Для прохождения циклом
         __m128 v4;
     };
@@ -59,7 +59,7 @@ public:
     {
         return _mm_add_ps(v4, vec.v4);
     }
-    
+
     inline Vector4D operator-(const Vector4D& vec) const
     {
         return _mm_sub_ps(v4, vec.v4);
@@ -113,10 +113,10 @@ public:
         return _mm_div_ps(v4, _mm_broadcastss_ps(norm_bc));
     }
 
-    inline float NormSq() const 
+    inline float NormSq() const
     {
         DCHECK_ALIGNMENT_16;
-        return Dot(*this); 
+        return Dot(*this);
     }
 };
 
