@@ -83,6 +83,8 @@ public:
     FastVector3D(const Vector4D& vec) : Vector4D(vec) {} // Фактически, конструктор копироваия
     FastVector3D(__m128 val) : Vector4D(val) {}
 
+    Vector3D ToVector3D() const { return { x, y, z }; }
+
 public:
     inline float Dot(const FastVector3D& another) const
     {

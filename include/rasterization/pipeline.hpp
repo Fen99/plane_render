@@ -5,6 +5,7 @@
 #include "threadpool/threadpool.hpp"
 
 #include <vector>
+#include <fstream>
 
 namespace plane_render {
 
@@ -14,7 +15,9 @@ private:
     static constexpr size_t ThreadsCount = 8;
 
 public:
-    RasterizationPipeline(const RenderingGeometryPtr& geom, std::vector<SceneObject>&& objects_names);
+    // perf_filename - куда писать перформанс. Формат - <total>\t<vs>\t<fs+rast>
+    RasterizationPipeline(const RenderingGeometryPtr& geom, std::vector<SceneObject>&& objects,
+                          const std::string& perf_filename);
     RasterizationPipeline(const RasterizationPipeline&) = delete;
     RasterizationPipeline& operator=(const RasterizationPipeline&) = delete;
 
@@ -38,8 +41,7 @@ private:
 
     Rasterizer rasterizer_;
 
-    size_t iterations_ = 0;
-    std::pair<double, double> sum_time_ = { 0.0, 0.0 }; // vs; fs
+    std::ofstream perf_output_;
 };
 
 typedef std::shared_ptr<RasterizationPipeline> RasterizationPipelinePtr;

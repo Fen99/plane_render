@@ -20,21 +20,36 @@ public:
     class VertexShader
     {
     // Создавать объекты вершинного шейдера и пользоваться ими должен только SceneObject
-    // Этой же логики должны придерживаться наследники
+    // Этой же логики должны придерживаться наследники (закрывать конструктор, объявлять другом SceneObject)
+    // Для конструктора лучше использовать using VertexShader::VertexShader;
+    protected:
+        SceneObject* associated_object_ = nullptr;
+        friend class SceneObject;
+
     protected:
         VertexShader(SceneObject* object) : associated_object_(object) {}
         virtual ~VertexShader() {}
 
+        // Функция должна перевести массив исходных координат GetAssociatedSrcCoords()
+        // в трансформированную геометрию GetAssociatedVertices()
+        // (!) Перевод в px - тоже на вершинном шейдере!
         virtual void Update(); // Берет информацию из RenderingInfo о движении камеры
-
+    
+    // Наследникам нужны данные для работы
     protected:
-        SceneObject* associated_object_ = nullptr;
-        friend class SceneObject;
+        const RenderingGeometry& GetGeom() const { return *associated_object_->geom_.get(); }
+        VerticesVector& GetAssociatedVertices() { return associated_object_->vertices_; }
+        const Vec4DynamicArray& GetAssociatedSrcCoords() const { return associated_object_->vert_src_coords_; }
     };
 
 public:
     SceneObject(const RenderingGeometryConstPtr& geom, const std::string& obj_filename, float scale = 1.0,
                 size_t triangles_per_task = 1000);
+    
+    // Создание объекта без нормалей и текстурных координат. Это должен учитывать фрагментный шейдер!
+    SceneObject(const RenderingGeometryConstPtr& geom, const std::vector<Vector3D>& vertices,
+                const std::vector<size_t>& indices, size_t triangles_per_task = 1000);
+
     SceneObject(SceneObject&& another);
     ~SceneObject();
 

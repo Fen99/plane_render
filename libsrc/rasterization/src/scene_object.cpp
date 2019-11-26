@@ -27,6 +27,20 @@ SceneObject::SceneObject(const RenderingGeometryConstPtr& geom, const std::strin
     LoadMeshFile(obj_filename, scale);
 }
 
+SceneObject::SceneObject(const RenderingGeometryConstPtr& geom, const std::vector<Vector3D>& vertices,
+                         const std::vector<size_t>& indices, size_t triangles_per_task) : 
+    geom_(geom),
+    indices_(indices),
+    triangles_per_task_(triangles_per_task)
+{
+    CHECK(indices.size() % 3 == 0);
+    for (const auto& v : vertices)
+    {
+        vert_src_coords_.emplace_back(v.x, v.y, v.z, 1.f);
+        vertices_.emplace_back(TextureCoords{0, 0}, Vector3D{0, 1, 0}); // Фиктивная вершина
+    }
+}
+
 SceneObject::SceneObject(SceneObject&& another) :
     geom_(another.geom_),
     vert_src_coords_(another.vert_src_coords_),

@@ -7,11 +7,12 @@
 namespace plane_render {
 
 RasterizationPipeline::RasterizationPipeline(const RenderingGeometryPtr& geom,
-                                             std::vector<SceneObject>&& objects) :
+                                             std::vector<SceneObject>&& objects, const std::string& perf_filename) :
     geom_(geom),
     objects_(std::move(objects)),
     pool_(ThreadsCount),
-    rasterizer_(geom_)
+    rasterizer_(geom_),
+    perf_output_(perf_filename, std::ios_base::out)
 {}
 
 void RasterizationPipeline::CameraMove(float dx, float dy, float dz)
@@ -37,7 +38,6 @@ void RasterizationPipeline::Update()
 
     auto tv = std::chrono::system_clock::now();
     std::chrono::duration<double, std::milli> const vs = tv - t0;
-    DLOG(INFO) << "Interations: " << iterations_ << "; vs_debug: = " << vs.count() << " ms" << std::endl;
 
     for (auto& obj : objects_)
     {
@@ -64,16 +64,7 @@ void RasterizationPipeline::Update()
     }
     auto const t1 = std::chrono::system_clock::now();
     std::chrono::duration<double, std::milli> const fs = t1 - tv;
-    sum_time_.first += vs.count();
-    sum_time_.second += fs.count();
-    iterations_++;
-
-    std::cout << iterations_ << ": " << vs.count() << "; " << fs.count() << "; sum = " << (vs+fs).count() << std::endl;
-    if (iterations_ > 0 && iterations_ % 100 == 0)
-    {
-        std::cout << "Avg. after " << iterations_ << " iterations: " << sum_time_.first / iterations_ << "; " <<
-                     sum_time_.second / iterations_ << "; sum_avg = " << (sum_time_.first + sum_time_.second) / iterations_ << std::endl;
-    }
+    perf_output_ << (vs+fs).count() << "\t" << vs.count() << "\t" << fs.count() << std::endl;
 }
 
 } // namespace plane_render

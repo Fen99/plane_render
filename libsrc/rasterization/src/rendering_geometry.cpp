@@ -15,9 +15,9 @@ RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float
     SetToPixelsCoeffitients();
 
     // Считаем перспективу 1 раз
-    float ratio = static_cast<float>(screen_width_) / screen_height_;
+    ratio_ = static_cast<float>(screen_width_) / screen_height_;
     perspective_.rows[0] = { 1.f / std::tan(fov_), 0, 0, 0 };
-    perspective_.rows[1] = { 0, ratio / std::tan(fov_), 0, 0 };
+    perspective_.rows[1] = { 0, ratio_ / std::tan(fov_), 0, 0 };
     perspective_.rows[2] = { 0, 0, (n_ + f_) / (n_ - f_), 2/(1/f_ - 1/n_) };
     perspective_.rows[3] = { 0, 0, 1.f, 0 };
 
@@ -41,6 +41,9 @@ void RenderingGeometry::UpdateTransform()
     result_space_ = rotation_ * motion;
 
     light_pos_ = result_space_ * light_pos_src_;
+    at_ = { camera_pos_src_.x + rotation_.rows[2].x,
+            camera_pos_src_.y + rotation_.rows[2].y,
+            camera_pos_src_.z + rotation_.rows[2].z };
 }
 
 void RenderingGeometry::Rotate(const RotationAngles& rot)
@@ -55,7 +58,7 @@ void RenderingGeometry::Rotate(const RotationAngles& rot)
 
     curr_rotation_matrix.rows[0] = { e1_rot.x, e1_rot.y, e1_rot.z, 0 };
     curr_rotation_matrix.rows[1] = { e2_rot.x, e2_rot.y, e2_rot.z, 0 };
-    curr_rotation_matrix.rows[2] = { e3_rot.x, e3_rot.y, e3_rot.z, 0 };
+    curr_rotation_matrix.rows[2] = { e3_rot.x, e3_rot.y, e3_rot.z, 0 }; // Фактически, at
     rotation_ = rotation_ * curr_rotation_matrix;
 
     UpdateTransform();
@@ -79,13 +82,6 @@ void RenderingGeometry::SetToPixelsCoeffitients()
     topixels_add_ = _mm_set_ps(0.f, 0.f, (-0.5f + screen_height_/2.f), (-0.5f + screen_width_ /2.f));
 }
 
-/*
-PixelPoint RenderingGeometry::ToPixelsPoint(float ksi, float eta) const
-{
-    return { Clump((ScreenDimension) std::round(-1.0/2 + screen_width_ / 2.0*(ksi + 1)), 0, screen_width_-1),
-             Clump((ScreenDimension) std::round(-1.0/2 + screen_height_ / 2.0*(eta + 1)), 0, screen_height_-1) };
-}
-*/
 void RenderingGeometry::TransformGeometry(const Vector4D& src_vec4, Vertex& out_v) const
 {
     // Сохраняем геометрию (для z-буффера и фрагментного шейдера)
@@ -98,9 +94,7 @@ void RenderingGeometry::TransformGeometry(const Vector4D& src_vec4, Vertex& out_
     // Получаем (ksi, eta, dzeta) и переводим его в пиксели
     Vector4D coords4d = perspective_ * out_v.vertex_coords; // (ksi*z, eta*z, dzeta*z, z)
     FastVector3D coords_screenspace = _mm_div_ps(coords4d, _mm_set1_ps(out_v.vertex_coords.z));
-    __m128 pixel_pos = _mm_add_ps(_mm_mul_ps(coords_screenspace, topixels_mul_), topixels_add_);
-    pixel_pos = _mm_round_ps(pixel_pos, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-    out_v.SetPixelPos(pixel_pos);
+    SetPixelPos(coords_screenspace, out_v);
 }
 
 } // namespace plane_render

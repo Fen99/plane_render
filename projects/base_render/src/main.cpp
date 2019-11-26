@@ -25,7 +25,7 @@ void Measurement(RenderingGeometry& geom, SDLAdapter& adapter)
         adapter.DrawScreen();
     }*/
 
-    FastVector3D at{0.f, 1.f, 0.f};
+    FastVector3D at{0.3f, 1.f, 0.3f};
     while(iter < iters)
     {
         float const phi = 2.f / iters * 3.1415926 * iter++;
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
     objects.back().GetFS()->LoadTexture(argv[2]);
 
     RasterizationPipelinePtr pipeline =
-        std::make_shared<RasterizationPipeline>(geom, std::move(objects));
+        std::make_shared<RasterizationPipeline>(geom, std::move(objects), std::string(argv[0])+".pd");
 
     SDLAdapter adapter(pipeline);
 
