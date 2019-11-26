@@ -1,6 +1,3 @@
 [submodule "third-party/easyloggingpp"]
 	path = third-party/easyloggingpp
 	url = https://github.com/amrayn/easyloggingpp
-[submodule "third-party/eigen-git-mirror"]
-	path = third-party/eigen-git-mirror
-	url = https://github.com/eigenteam/eigen-git-mirror

@@ -1,9 +1,7 @@
 #pragma once
 
 #include "rasterization/scene_object.hpp"
-#include "rasterization/graphics_types.hpp"
-
-#include "common/logger.hpp"
+#include "rasterization/screen_buffer.hpp"
 
 #include <utility>
 #include <memory>
@@ -15,61 +13,26 @@ class Rasterizer
 // Ставим сюда, чтобы inline компилировался
 private:
     RenderingGeometryConstPtr geom_;
-
-    float* z_buffer_ = nullptr;
-    Color* pixels_ = nullptr;
+    ScreenBuffer screen_buffer_;
 
 public:
     Rasterizer(const RenderingGeometryConstPtr& geom);
     Rasterizer(const Rasterizer&) = delete;
     Rasterizer& operator=(const Rasterizer&) = delete;
 
-    // Рисует объект на сцене, используя его шейдеры
-    // Пробегает по всем треугольникам, но рисует от min_line до max_line (включительно)
-    void Rasterize(const SceneObject& object, ScreenDimension min_line, ScreenDimension max_line);
-    void Clear();
+    // Растеризует треугольники объекта obj, начиная со start и в количестве count
+    // Из obj берутся vertices и indices
+    // Вершины имеют индексы for s in range(start, start+count): (indices[s]; indices[s+1]; indices[s+2])
+    // Если start+count >= len(indices) => return
+    void Rasterize(const SceneObject& obj, size_t start, size_t count);
+    void Clear() { screen_buffer_.Clear(); }
 
-    const Color* GetPixels() const { return pixels_; }
-    size_t GetBufferSize()   const { return geom_->PixelsCount()*sizeof(Color); }
-
-    ~Rasterizer();
-
-private:
-    inline size_t CalcIndex(const PixelPoint& point) const
-    {
-        DCHECK(ValidateIndex(point));
-        return point.y*geom_->Width() + point.x;
-    }
-    inline Color& At(const PixelPoint& point) { return pixels_[CalcIndex(point)]; }
-
-    void RasterizeTriangle(const SceneObject& obj, ScreenDimension min_line, ScreenDimension max_line,
-                           const TriangleIndices& indices);
+    const Color* GetPixels() const { return screen_buffer_.GetPixels(); }
+    size_t GetBufferSize()   const { return screen_buffer_.GetBufferSize(); }
 
 private:
-    inline bool ValidateIndex(const PixelPoint& point) const
-    {
-        return point.x < geom_->Width() && point.y < geom_->Height() && point.x >= 0 && point.y >= 0;
-    }
-
-    inline static BaricentricCoords ToScreenBaricentric(
-        const PixelPoint& p, const PixelPoint& A, const PixelPoint& B, const PixelPoint& C)
-    {
-        Vector3D x_vec = { (float) B.x - A.x, (float) C.x - A.x, (float) A.x - p.x };
-        Vector3D y_vec = { (float) B.y - A.y, (float) C.y - A.y, (float) A.y - p.y };
-        Vector3D cross = x_vec.Cross(y_vec);
-        return { 1.f - (cross.x+cross.y)/cross.z, cross.x/cross.z, cross.y/cross.z };
-    }
-
-    // "Истинные" БЦ-координаты в мировом пространстве
-    inline static BaricentricCoords ToWorldBaricentric(const BaricentricCoords& screen_bc, float z1, float z2, float z3)
-    {
-        float alphap = screen_bc.a / z1;
-        float betap  = screen_bc.b / z2;
-        float gammap = screen_bc.c / z3;
-        float summ = alphap + betap + gammap;
-
-        return { alphap/summ, betap/summ, gammap/summ };
-    }
+    // Вызывающий сам проверяет, что (A, B, C).z <= -GraphicsEps
+    void RasterizeTriangle(const SceneObject& obj, const Vertex& A, const Vertex& B, const Vertex& C);
 };
 
 } // namespace plane_render

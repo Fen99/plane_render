@@ -53,6 +53,7 @@ void ThreadPool::ThreadFunction(size_t id)
     while (true)
     {
         // Ждем пробуждения (и сразу освобождаем мьютекс)
+        if (tasks_->empty())
         {
             std::unique_lock<std::mutex> cv_lock(task_mutices_[id]);
             new_tasks_.wait(cv_lock);

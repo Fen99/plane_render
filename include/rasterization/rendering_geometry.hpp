@@ -3,26 +3,17 @@
 #include "graphics_types.hpp"
 #include "common/logger.hpp"
 
-#include <Eigen/Dense>
 #include <memory>
 
 namespace plane_render {
 
-// Общая информация о сцене: позиция камеры, света
-// + методы преобразования геометрии в экранную
-struct RenderingGeometry
+// Общая информация о сцене: позиция камеры, света + методы преобразования геометрии в экранную
+struct alignas(16) RenderingGeometry
 {
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    typedef Eigen::Matrix<float, 4, Eigen::Dynamic> SrcGeometryMatrix; // 4D- вектора (x, y, z, 1)
-    
-    typedef Eigen::Matrix<float, 4, 4> TransformMatrix;
-    typedef Eigen::Matrix<float, 3, Eigen::Dynamic> TransformedGeometryMatrix; // (ksi, eta, dzeta)
-    typedef Eigen::Matrix<ScreenDimension, 2, Eigen::Dynamic> PixelsMatrix;
-
-public:
     RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov);
+    void* operator new (size_t bytes) { return AlignmentAllocator<RenderingGeometry, 16>().allocate(bytes); }
+    void operator delete(void* ptr) { AlignmentAllocator<void, 16>().deallocate(ptr, 0); }
 
     void Move(const Vector3D& mov);
     void Rotate(const RotationAngles& rot);
@@ -30,45 +21,48 @@ public:
     void LookAt(const Vector3D& pos, const RotationAngles& angles);
 
     // Преобразование геометрии для вершинных шейдеров
-    // Возвращает <min_row, max_row> - границы строк, содержащих объект
-    // src_vertices - N колонок (x, y, z, 1) - 3D-вектора-вершины, z_vector - z-координаты вершин
-    // vecs_3d, pixels (без Clump!) - выходные данные
-    std::pair<ScreenDimension, ScreenDimension> TransformGeometry(
-        const SrcGeometryMatrix& src_vertices, TransformedGeometryMatrix& vecs_3d, PixelsMatrix& pixels) const;
+    // src_vec4 - (x, y, z, 1.0) - исходный 4d-вектор координат
+    // out_vp - Vertex, соответствующая вершине. В ней заполняются vertex_coords, pixel_pos
+    // (!) При подаче в растеризатор нужно проверить, что z_вершины <= -GraphicsEps - нельзя рисовать точки с z >= 0
+    void TransformGeometry(const Vector4D& src_vec4, Vertex& out_v) const;
 
     ScreenDimension Width()  const { return screen_width_;  }
     ScreenDimension Height() const { return screen_height_; }
-    size_t PixelsCount() const { return pixels_count_; }
 
-    WorldPoint CameraPos() const { return camera_pos_; }
-    WorldPoint LightPos()  const { return light_pos_;  }
-    void SetLightPos(const WorldPoint& pos) { light_pos_ = pos; }
+    const FastVector3D& CameraPosSrc() const { return camera_pos_src_; }
+    const FastVector3D& LightPosSrc()  const { return light_pos_src_;  }
+    const FastVector3D& LightPos()     const { return light_pos_;      }
 
-private:
-    void UpdateTransformMatrices();
-    std::pair<ScreenDimension, ScreenDimension> TransformToPixels(
-        const TransformedGeometryMatrix& m, PixelsMatrix& p) const;
+    void SetLightSrcPos(const Vector3D& pos);
 
 private:
-    static const Vector3D UP;
+    void SetToPixelsCoeffitients();
+    void UpdateTransform(); // Пересчитывает матрицы и свет
+
+private:
+    static const FastVector3D UP;
 
 private:
     // Преобразования геометрии
-    TransformMatrix perspective_; // Считаем 1 раз
-    TransformMatrix rotation_;
-    TransformMatrix result_transform_;
+    Matrix4 perspective_; // Считаем 1 раз
+    Matrix4 rotation_;
+    Matrix4 result_space_; // rotation*move
 
-    WorldPoint light_pos_;
-    WorldPoint camera_pos_;
+    // Вектора для преобразования экранных координат в пиксельные
+    __m128 topixels_mul_;
+    __m128 topixels_add_;
+
+    FastVector3D light_pos_src_ = {0, 0, 0}; // Исходная
+    FastVector3D light_pos_ = {0, 0, 0}; // Повернутая и смещенная
+    FastVector3D camera_pos_src_ = {0, 0, 0}; // Исходная. Повернутая и смещенная смысла не имеет - она (0; 0; 0)
 
     // Геометрия экрана
     ScreenDimension screen_width_ = 0;
     ScreenDimension screen_height_ = 0;
-    size_t pixels_count_ = 0; // w*h
 
     float n_ = 0; // Ближний план 
     float f_ = 0; // Дальный план
-    float fov_ = 1.0;
+    float fov_ = 1.f;
 };
 
 typedef std::shared_ptr<RenderingGeometry> RenderingGeometryPtr;

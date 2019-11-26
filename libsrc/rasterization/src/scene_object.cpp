@@ -1,6 +1,5 @@
 ﻿#include "scene_object.hpp"
 
-#include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "graphics_types.hpp"
 
@@ -12,6 +11,15 @@
 
 namespace plane_render {
 
+void SceneObject::VertexShader::Update()
+{
+    DCHECK(associated_object_->vert_src_coords_.size() == associated_object_->vertices_.size());
+
+    for (size_t i = 0; i < associated_object_->vert_src_coords_.size(); i++)
+        associated_object_->geom_->TransformGeometry(associated_object_->vert_src_coords_[i], associated_object_->vertices_[i]);
+}
+
+
 SceneObject::SceneObject(const RenderingGeometryConstPtr& geom, const std::string& obj_filename, float scale) :
     geom_(geom)
 {
@@ -20,6 +28,7 @@ SceneObject::SceneObject(const RenderingGeometryConstPtr& geom, const std::strin
 
 SceneObject::SceneObject(SceneObject&& another) :
     geom_(another.geom_),
+    vert_src_coords_(another.vert_src_coords_),
     vertices_(another.vertices_),
     indices_(another.indices_),
     vs_(another.vs_),
@@ -31,8 +40,7 @@ SceneObject::SceneObject(SceneObject&& another) :
 
 SceneObject::~SceneObject()
 {
-    AlignmentAllocator<void, 16>().deallocate(vs_, 0); // Здесь тип аллокатора и размер не важны
-
+    delete vs_;
     delete fs_;
 }
 
@@ -43,7 +51,7 @@ void SceneObject::LoadMeshFile(const std::string& obj_filename, float scale)
         throw std::invalid_argument("can not find file " + std::string(obj_filename));
 
     std::string line;
-    std::vector<WorldPoint> pos;
+    std::vector<Vector3D> pos;
     std::vector<TextureCoords> tex;
     std::vector<Vector3D> norm;
     while(std::getline(in, line))
@@ -53,7 +61,7 @@ void SceneObject::LoadMeshFile(const std::string& obj_filename, float scale)
         iss >> word;
         if(word == "v")
         {
-            WorldPoint v;
+            Vector3D v;
             if(!(iss >> v.x >> v.y >> v.z))
                 throw std::runtime_error("could not parse line: " + line);
             v.x *= scale;
@@ -82,37 +90,45 @@ void SceneObject::LoadMeshFile(const std::string& obj_filename, float scale)
         {
             size_t idx[3] = {};
             char trash;
-            auto const vsize = vertices_.size();
+            auto const vsize = vert_src_coords_.size();
             while (iss >> idx[0] >> trash >> idx[1] >> trash >> idx[2])
             {
                 if (static_cast<int>(idx[2]) - 1 != -1) // FIXME: Хак, чтобы использовать этот парсер для "неполных" obj
-                    vertices_.emplace_back(pos[idx[0] - 1], tex[idx[1] - 1], norm[idx[2] - 1]);
+                {
+                    vert_src_coords_.emplace_back(pos[idx[0] - 1], 1.f);
+                    vertices_.emplace_back(tex[idx[1] - 1], norm[idx[2] - 1]);
+                }
                 else
-                    vertices_.emplace_back(pos[idx[0] - 1], tex[idx[1] - 1], Vector3D{0, 1, 0}); // Фиктивная нормаль
+                {
+                    vert_src_coords_.emplace_back(pos[idx[0] - 1], 1.f);
+                    vertices_.emplace_back(tex[idx[1] - 1], Vector3D{0, 1, 0}); // Фиктивная нормаль
+                }
             }
 
-            auto const vcount = vertices_.size() - vsize;
+            auto const vcount = vert_src_coords_.size() - vsize;
             if (vcount == 3)
             {
-                indices_.push_back(vsize);     indices_.push_back(vsize + 1);
-                indices_.push_back(vsize + 1); indices_.push_back(vsize + 2);
-                indices_.push_back(vsize + 2); indices_.push_back(vsize);
+                indices_.push_back(vsize);
+                indices_.push_back(vsize + 1);
+                indices_.push_back(vsize + 2);
             }
             else if (vcount == 4)
             {
-                indices_.push_back(vsize);     indices_.push_back(vsize + 1);
-                indices_.push_back(vsize + 1); indices_.push_back(vsize + 2);
-                indices_.push_back(vsize + 2); indices_.push_back(vsize);
+                indices_.push_back(vsize);
+                indices_.push_back(vsize + 1);
+                indices_.push_back(vsize + 2);
 
-
-                indices_.push_back(vsize + 2); indices_.push_back(vsize);
-                indices_.push_back(vsize); indices_.push_back(vsize + 3);
-                indices_.push_back(vsize + 3); indices_.push_back(vsize + 2);
+                indices_.push_back(vsize + 2);
+                indices_.push_back(vsize);
+                indices_.push_back(vsize + 3);
             }
             else
                 throw std::runtime_error("Faces not supported!");
         }
     }
+
+    DCHECK(vert_src_coords_.size() == vertices_.size());
+    DCHECK(indices_.size() % 3 == 0);
 }
 
 void SceneObject::Update()

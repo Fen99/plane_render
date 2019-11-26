@@ -34,6 +34,7 @@ public:
         {
             Release();
             another.parent_ = nullptr;
+            return *this;
         }
         ~ListMTAccessor() { Release(); }
 

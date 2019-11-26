@@ -1,133 +1,105 @@
 #include "rasterizer.hpp"
 
 #include "rasterization/scene_object.hpp"
-#include "rasterization/vertex_shader.hpp"
 #include "rasterization/fragment_shader.hpp"
 
-#include "common/math_simple.hpp"
+#include "common/basic_math.hpp"
 
-#include <Eigen/Dense>
 #include <cmath>
 #include <numeric>
 
 namespace plane_render {
 
 Rasterizer::Rasterizer(const RenderingGeometryConstPtr& geom) :
-    geom_(geom)
+    geom_(geom),
+    screen_buffer_(geom_->Width(), geom_->Height())
 {
     DCHECK(geom_);
-
-    pixels_ = new Color[geom_->PixelsCount()];
-    z_buffer_ = new float[geom_->PixelsCount()];
-    CHECK_ALWAYS_COMMENT(pixels_ && z_buffer_, "memory allocation error");
-
     Clear();
 }
 
-Rasterizer::~Rasterizer()
+void Rasterizer::Rasterize(const SceneObject& obj, size_t start, size_t count)
 {
-    delete[] pixels_;
-    delete[] z_buffer_;
-}
+    const VerticesVector& vertices = obj.Vertices();
+    const IndicesList& indices = obj.Indices();
 
-void Rasterizer::Clear()
-{
-    for (size_t i = 0; i < geom_->PixelsCount(); i++)
-        z_buffer_[i] = -std::numeric_limits<float>::max();
-    memset(pixels_, 0, geom_->PixelsCount() *sizeof(Color));
-}
-
-void Rasterizer::Rasterize(const SceneObject& object, ScreenDimension min_line, ScreenDimension max_line)
-{
-    DCHECK(min_line >= 0 && max_line >= 0 && min_line < geom_->Height() && max_line < geom_->Height() &&
-          min_line <= max_line);
-
-    const auto& vs = *object.GetVS();
-    if (vs.GetLowerRow() > max_line || vs.GetUpperRow() < min_line)
-        return;
-
-    const auto& indices = object.Indices();
-    DCHECK(indices.size() % 6 == 0); // Треугольник - 3 линии
-
-    for (size_t i = 0; i < indices.size() / 6; i++)
+    DCHECK(indices.size() % 3 == 0); // Треугольник - 3 точки
+    DCHECK(start % 3 == 0);
+    for (size_t s = start; s < start+count*3 && s < indices.size(); s += 3)
     {
-        // Проверяем, что точки действительно образуют треугольник
-        DCHECK(indices[i*6+1] == indices[i*6+2] &&
-              indices[i*6+3] == indices[i*6+4] &&
-              indices[i*6+5] == indices[i*6]);
-        RasterizeTriangle(object, min_line, max_line, { indices[i*6], indices[i*6+1], indices[i*6+3] });
+        const auto& A = vertices[indices[s]];
+        const auto& B = vertices[indices[s+1]];
+        const auto& C = vertices[indices[s+2]];
+        if (A.vertex_coords.z > -GraphicsEps || A.vertex_coords.z > -GraphicsEps || C.vertex_coords.z > -GraphicsEps)
+            continue;
+        RasterizeTriangle(obj, A, B, C);
     }
 }
 
-void Rasterizer::RasterizeTriangle(const SceneObject& obj, ScreenDimension min_line, ScreenDimension max_line,
-                                   const TriangleIndices& indices)
+void Rasterizer::RasterizeTriangle(const SceneObject& obj, const Vertex& A, const Vertex& B, const Vertex& C)
 {
-    const VertexShader& vs = *obj.GetVS();
     const FragmentShader& fs = *obj.GetFS();
 
-    // Геометрия
-    const Vector3D& v1_3d = *vs.GetPoint(indices.v1);
-    const Vector3D& v2_3d = *vs.GetPoint(indices.v2);
-    const Vector3D& v3_3d = *vs.GetPoint(indices.v3);
-
-    if (v1_3d.z < -1 || v2_3d.z < -1 || v3_3d.z < -1)
-        return;
-
-    const PixelPoint& p1_px = *vs.GetAsPixelPoint(indices.v1);
-    const PixelPoint& p2_px = *vs.GetAsPixelPoint(indices.v2);
-    const PixelPoint& p3_px = *vs.GetAsPixelPoint(indices.v3);
-
-    // Свойства
-    const Vertex& vert1 = obj.GetVertex(indices.v1);
-    const Vertex& vert2 = obj.GetVertex(indices.v2);
-    const Vertex& vert3 = obj.GetVertex(indices.v3);
+    // alias для координат в px
+    const auto& p1_px = A.pixel_pos;
+    const auto& p2_px = B.pixel_pos;
+    const auto& p3_px = C.pixel_pos;
 
     // Определяем координаты описывающего прямоугольника
-    // Px - уже с Clump
-    PixelPoint mins = { std::max(std::min({p1_px.x, p2_px.x, p3_px.x}), 0), 
-                        std::max(std::min({p1_px.y, p2_px.y, p3_px.y}), 0) };
-    PixelPoint maxs = { std::min(std::max({p1_px.x, p2_px.x, p3_px.x}), geom_->Width()-1),
-                        std::min(std::max({p1_px.y, p2_px.y, p3_px.y}), geom_->Height()-1) };
+    // px - без Clump, во float. Здесь переводим во вменяемый вид
+    PixelPoint mins = { (ScreenDimension) std::max(std::min({p1_px.x, p2_px.x, p3_px.x}), 0.f), 
+                        (ScreenDimension) std::max(std::min({p1_px.y, p2_px.y, p3_px.y}), 0.f) };
+    PixelPoint maxs = { (ScreenDimension) std::min(std::max({p1_px.x, p2_px.x, p3_px.x}), geom_->Width()-1.f),
+                        (ScreenDimension) std::min(std::max({p1_px.y, p2_px.y, p3_px.y}), geom_->Height()-1.f) };
 
-    // Проверяем, может ли данный поток нарисовать хоть что-то в этом треугольнике
-    if (mins.y > max_line || maxs.y < min_line)
-        return;
-    // Проверяем, валиден ли треугольник
-    if (mins.x == maxs.x || mins.y == maxs.y)
+    // Проверяем, валиден ли треугольник - простая проверка
+    BaricentricCoords::BCPrecalculated bpc(A, B, C);
+    if (!bpc.IsValid()) // Вырожденные треугольники
         return;
 
-    for (ScreenDimension y_dim = std::max(mins.y, min_line); y_dim <= std::min(maxs.y, max_line); y_dim++)
-     for (ScreenDimension x_dim = mins.x; x_dim <= maxs.x; x_dim++)
-     {
-         PixelPoint curr_point = { x_dim, y_dim };
-         size_t idx = CalcIndex(curr_point);
-         
-         // Точно корректный
-         //if (!ValidateIndex(curr_point))
-         //    continue;
+    // TODO: переход к следующей строке, если не удалось заблокировать данную
+    // Управление растеризацией
+    // ScreenDimension rast_low = mins.y; // Растеризация - нижний край
+    // ScreenDimension rast_high = -1; // Растеризация - верхний край (первая из пропущенных строк)
+    // ScreenDimension notrast_low = -1; // Последний пропущенный ряд
 
-         BaricentricCoords screen_bc = ToScreenBaricentric(curr_point, p1_px, p2_px, p3_px);
-         //if (!screen_bc.IsValid())
-         //    continue;
-         BaricentricCoords world_bc = screen_bc;
-         //BaricentricCoords world_bc = ToWorldBaricentric(screen_bc, vert1.vreg.position.z, vert2.vreg.position.z, 
-         //                                                vert3.vreg.position.z);
-         if (!world_bc.IsValid())
-            continue;
+    // ScreenDimension memx_low = -1; // Запоминаем x, где попросили lock на нижнем крае
+    // ScreenDimension memx_high = -1; // То же, на первой пропущенной строке
+    
+    ScreenBuffer::Accessor lines_acc = screen_buffer_.GetAccessor();
+    for (ScreenDimension& y_dim = mins.y; y_dim <= maxs.y; y_dim++)
+    {
+        bool was_pixels = false;
+        for (ScreenDimension x_dim = mins.x; x_dim <= maxs.x; x_dim++)
+        {
+            PixelPoint curr_point = { x_dim, y_dim };
+            BaricentricCoords bc(bpc, A, curr_point);
+            if (!bc.IsValid())
+            {
+                if (!was_pixels)
+                    continue;
+                else
+                    break; // Нет смысла дальше идти по этому ряду - треугольника там уже не будет
+            }
 
-         // Проверяем, видна ли поверхность
-         Vertex avg_vertex = FragmentShader::AgregateVertices(world_bc, vert1, vert2, vert3);
-         float dzeta_avg = world_bc.a*v1_3d.z + world_bc.b*v2_3d.z + world_bc.c*v3_3d.z;
-         //float dzeta_avg = screen_bc.a*v1_3d.z + screen_bc.b*v2_3d.z + screen_bc.c*v3_3d.z;
-         if (dzeta_avg <= z_buffer_[idx])
-             continue;
-         else
-             z_buffer_[idx] = dzeta_avg;
+            was_pixels = true;
+            if (lines_acc.LockedRow() == ScreenBuffer::Accessor::INVALID_ROW)
+                lines_acc.LockRow(y_dim);
+        
+            // Проверяем, видна ли точка
+            DCHECK((ScreenDimension) lines_acc.LockedRow() == y_dim);
+            Vertex avg_vertex = bc.AverageVertices(A, B, C);
+            if (avg_vertex.vertex_coords.z < lines_acc.Z(x_dim))
+                continue;
+            else
+                lines_acc.Z(x_dim) = avg_vertex.vertex_coords.z;
 
-         // Отправляем точку во фрагментный шейдер
-         pixels_[idx] = fs.ProcessFragment(avg_vertex);
-         //pixels_[CalcIndex(curr_point)] = tri_color;
-     }
+            // Отправляем точку во фрагментный шейдер
+            lines_acc.Pixel(x_dim) = fs.ProcessFragment(avg_vertex);
+        }
+
+        lines_acc.ReleaseRow();
+    }
 }
 
 } // namespace plane_render

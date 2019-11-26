@@ -102,7 +102,7 @@ void read_ppm_data(FILE *f, int *img_in, int is_ascii)
 void Texture::Load(const std::string& fname)
 {
     FILE* ppm_file = fopen(fname.c_str(), "r");
-    CHECK_ALWAYS(ppm_file);
+    CHECK(ppm_file);
 
     int width = 0;
     int height = 0;
@@ -110,12 +110,12 @@ void Texture::Load(const std::string& fname)
     int is_ascii = 0;
     read_ppm_header(ppm_file, &width, &height, &img_colors, &is_ascii);
     
-    CHECK_ALWAYS((width == height) && (width % StorageBlockSide == 0));
+    CHECK((width == height) && (width % StorageBlockSide == 0));
     side_ = width;
     blocks_by_side_ = side_ / StorageBlockSide;
 
-    CHECK_ALWAYS(img_colors == 255);
-    CHECK_ALWAYS(is_ascii != 1); // binary file
+    CHECK(img_colors == 255);
+    CHECK(is_ascii != 1); // binary file
     int* texture_tmp = new int[side_*side_*3];
     read_ppm_data(ppm_file, texture_tmp, is_ascii);
 

@@ -1,7 +1,6 @@
 project(common)
 set(COMMON_SRC
     src/logger.cpp
-    src/math_simple.cpp
 )
 set(COMMON_DEPENDENCES easyloggingpp)
 

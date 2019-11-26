@@ -9,7 +9,7 @@ namespace plane_render {
 class FragmentShader
 {
 public:
-    FragmentShader(const RenderingGeometryConstPtr& info, size_t light_n = 3);
+    FragmentShader(const RenderingGeometryConstPtr& info);
     FragmentShader(const FragmentShader&) = delete;
     FragmentShader& operator=(const FragmentShader&) = delete;
     virtual ~FragmentShader() {}
@@ -19,18 +19,12 @@ public:
 
     virtual Color ProcessFragment(const Vertex& vertex_avg) const;
 
-public:
-    inline static Vertex AgregateVertices(const BaricentricCoords& bc, const Vertex& v1, const Vertex& v2, const Vertex& v3)
-    {
-        return v1*bc.a + v2*bc.b + v3*bc.c;
-    }
-
 private:
     RenderingGeometryConstPtr geom_;
     Texture texture_;
 
 private:
-    const size_t lightN_;
+    static constexpr size_t lightN_ = 3;
 };
 
 } // namespace plane_render

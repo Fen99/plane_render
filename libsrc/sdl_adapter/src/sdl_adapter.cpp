@@ -3,7 +3,7 @@
 #include "common/logger.hpp"
 #include "SDL.h"
 
-#define CHECK_SDL(x) CHECK_ALWAYS_COMMENT(x, std::string("SDL error: ") + SDL_GetError())
+#define CHECK_SDL(x) CHECK(x) << std::string("SDL error: ") + SDL_GetError()
 #define CHECK_SDL_NOTNULL(x) CHECK_SDL((x) != nullptr)
 #define CHECK_SDL_NULL(x) CHECK_SDL((x) == 0)
 

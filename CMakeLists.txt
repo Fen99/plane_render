@@ -12,9 +12,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "-Wall -Wextra -pthread")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
+    set(CMAKE_CXX_FLAGS "-Wall -Wextra -pthread -msse4.1 -mavx2")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -D_DEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -DNDEBUG")
 endif()
 
 #####################################################################

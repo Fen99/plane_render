@@ -1,7 +1,6 @@
 ﻿#include <iostream>
 
 #include "rasterization/fragment_shader.hpp"
-#include "rasterization/vertex_shader.hpp"
 
 #include "sdl_adapter/sdl_adapter.hpp"
 
@@ -27,13 +26,13 @@ void Measurement(RenderingGeometry& geom, SDLAdapter& adapter)
     }*/
 
     
-    Vector3D at{0.f, 1.f, 0.f};
+    FastVector3D at{0.f, 1.f, 0.f};
     while(iter < iters)
     {
         float const phi = 2.f / iters * 3.1415926 * iter++;
-        Vector3D dir{std::sin(phi) * std::cos(theta), std::sin(theta), std::cos(phi) * std::cos(theta)};
-        Vector3D campos = dir * 1.5f + at;
-        geom.LookAt(campos, {phi, theta});
+        FastVector3D dir{std::sin(phi) * std::cos(theta), std::sin(theta), std::cos(phi) * std::cos(theta)};
+        FastVector3D campos = dir * 1.5f + at;
+        geom.LookAt({campos.x, campos.y, campos.z}, {phi, theta});
         adapter.DrawScreen();
     }
 }
@@ -50,11 +49,11 @@ int main(int argc, char* argv[])
 //    geom->SetLightPos({100, 100, 300});
     RenderingGeometryPtr geom = std::make_shared<RenderingGeometry>(Width, Height, 0.1, 20, 1);
     geom->Move({0, 0.3, 10});
-    geom->SetLightPos({1, 1, 3});
+    geom->SetLightSrcPos({1, 1, 3});
 
-    std::vector<::SceneObject> objects;
+    std::vector<SceneObject> objects;
     objects.emplace_back(geom, argv[1]);
-    objects.back().SetShaders<VertexShader, FragmentShader>();
+    objects.back().SetShaders<SceneObject::VertexShader, FragmentShader>();
     objects.back().GetFS()->LoadTexture(argv[2]);
 
     RasterizationPipelinePtr pipeline =
