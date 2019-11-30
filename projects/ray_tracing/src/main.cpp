@@ -1,4 +1,5 @@
 ﻿#include "raycast.hpp"
+#include "rasterization/pipeline.hpp"
 #include "rasterization/fragment_shader.hpp"
 #include "sdl_adapter/sdl_adapter.hpp"
 
@@ -30,15 +31,15 @@ int const sph_size = sizeof(sph) / sizeof(sphere);
 
 std::vector<Vector3D> verts = // Vector3D - для совместимости
 {
-    {-1.f, -1.f, 0.f},
-    {-1.f,  0.f, 0.f},
-    {-1.f,  1.f, 0.f},
-    { 0.f, -1.f, 0.f},
-    { 0.f,  0.f, 0.f},
-    { 0.f,  1.f, 0.f},
-    { 1.f, -1.f, 0.f},
-    { 1.f,  0.f, 0.f},
-    { 1.f,  1.f, 0.f}
+    {-1.f, -1.f, 0.f },
+    {-1.f,  0.f, 0.f },
+    {-1.f,  1.f, 0.f },
+    { 0.f, -1.f, 0.f },
+    { 0.f,  0.f, 0.f },
+    { 0.f,  1.f, 0.f },
+    { 1.f, -1.f, 0.f },
+    { 1.f,  0.f, 0.f },
+    { 1.f,  1.f, 0.f }
 };
 std::vector<size_t> inds =
 {
@@ -124,12 +125,13 @@ void Measurement(RenderingGeometry& geom, SDLAdapter& adapter)
     int iter = 0;
     int const iters = 500;
 
+    FastVector3D at = {0, 0, 0};
     while(iter < iters)
     {
         float const phi = 2.f / iters * 3.1415926 * iter++;
-        FastVector3D dir{std::sin(phi) * std::cos(theta), std::sin(theta), std::cos(phi) * std::cos(theta)};
-        FastVector3D campos = dir * 1.5f;
-        geom.LookAt({campos.x, campos.y, campos.z}, {phi, theta});
+        FastVector3D dir{std::cos(phi) * std::cos(theta), std::sin(phi) * std::cos(theta), std::sin(theta)};
+        FastVector3D campos = dir * 2.f;
+        geom.LookAt(static_cast<FastVector3D>(campos+at).ToVector3D(), at.ToVector3D());
         adapter.DrawScreen();
     }
 }
@@ -138,16 +140,19 @@ int main(int argc, char* argv[])
 {
     ConfigureLogger("logger.conf");
 
-    RenderingGeometryPtr geom = std::make_shared<RenderingGeometry>(Width, Height, 0.1, 20, 1);
-    geom->Move({0, 0.3, 10});
+    RenderingGeometryPtr geom = std::make_shared<RenderingGeometry>(Width, Height, 0.1, 20, 1, Vector3D{0.f, 0.f, 1.f});
     geom->SetLightSrcPos({1, 1, 2});
 
     std::vector<SceneObject> objects;
     objects.emplace_back(geom, verts, inds, 1);
     objects.back().SetShaders<CustomVS, CustomFS>();
 
-    RasterizationPipelinePtr pipeline =
-        std::make_shared<RasterizationPipeline>(geom, std::move(objects), std::string(argv[0])+".pd");
+    std::string perf_filename = std::string(argv[0]) + ".pd";
+    if (argc > 1)
+        perf_filename = argv[1];
+
+    RenderProviderPtr pipeline =
+        std::make_shared<RasterizationPipeline>(geom, std::move(objects), perf_filename);
 
     SDLAdapter adapter(pipeline);
 

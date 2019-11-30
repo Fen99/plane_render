@@ -2,10 +2,11 @@
 
 namespace plane_render {
 
-const FastVector3D RenderingGeometry::UP{0.f, 1.f, 0.f};
-
-RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov) :
-        rotation_(Matrix4::Identity()),
+RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov,
+                                     const Vector3D& up) :
+        up_(up),
+        perspective_({}),
+        result_space_({}),
         screen_width_(w), screen_height_(h), n_(n_p), f_(f_p), fov_(fov)
 {
     DCHECK(w > 0 && h > 0);
@@ -24,47 +25,53 @@ RenderingGeometry::RenderingGeometry(ScreenDimension w, ScreenDimension h, float
     UpdateTransform();
 }
 
-void RenderingGeometry::LookAt(const Vector3D& pos, const RotationAngles& angles)
+void RenderingGeometry::LookAt(const Vector3D& pos, const Vector3D& at)
 {
     camera_pos_src_ = pos;
-    rotation_ = Matrix4::Identity();
-    Rotate(angles);
+    at_ = at;
+    
+    UpdateTransform();
 }
 
-void RenderingGeometry::UpdateTransform()
-{
-    // Трансляция
-    Matrix4 motion = { 1, 0, 0, -camera_pos_src_.x,
-                       0, 1, 0, -camera_pos_src_.y,
-                       0, 0, 1, -camera_pos_src_.z,
-                       0, 0, 0, 1 };
-    result_space_ = rotation_ * motion;
-
-    light_pos_ = result_space_ * light_pos_src_;
-    at_ = { camera_pos_src_.x + rotation_.rows[2].x,
-            camera_pos_src_.y + rotation_.rows[2].y,
-            camera_pos_src_.z + rotation_.rows[2].z };
-}
-
-void RenderingGeometry::Rotate(const RotationAngles& rot)
-{
-    Matrix4 curr_rotation_matrix = Matrix4::Identity();
-
+/*
     float cos_t = cos(rot.theta), sin_t = sin(rot.theta);
     float sin_f = sin(rot.phi), cos_f = cos(rot.phi);
     FastVector3D e3_rot = { cos_t*sin_f, sin_t, cos_t*cos_f };
-    FastVector3D e1_rot = UP.Cross(e3_rot).Normalized();
+    FastVector3D e1_rot = up_.Cross(e3_rot).Normalized();
     FastVector3D e2_rot = e3_rot.Cross(e1_rot).Normalized();
 
     curr_rotation_matrix.rows[0] = { e1_rot.x, e1_rot.y, e1_rot.z, 0 };
     curr_rotation_matrix.rows[1] = { e2_rot.x, e2_rot.y, e2_rot.z, 0 };
-    curr_rotation_matrix.rows[2] = { e3_rot.x, e3_rot.y, e3_rot.z, 0 }; // Фактически, at
-    rotation_ = rotation_ * curr_rotation_matrix;
+    curr_rotation_matrix.rows[2] = { e3_rot.x, e3_rot.y, e3_rot.z, 0 }; // Фактически, поворотная часть at
+*/
+void RenderingGeometry::UpdateTransform()
+{
+    FastVector3D dir = static_cast<FastVector3D>(camera_pos_src_ - at_);
+    if (dir.NormSq() == 0.f)
+    {
+        result_space_ = Matrix4::Identity();
+        return;
+    }
+    else
+        dir = dir.Normalized();
+    
+    FastVector3D right = up_.Cross(dir).Normalized();
+    FastVector3D e2 = dir.Cross(right).Normalized();
+    result_space_ = { right.x, right.y, right.z, -camera_pos_src_.Dot(right),
+                      e2.x,    e2.y,    e2.z,    -camera_pos_src_.Dot(e2),
+                      dir.x,   dir.y,   dir.z,   -camera_pos_src_.Dot(dir),
+                      0.f,     0.f,     0.f,     1.f };
 
+    light_pos_ = result_space_ * light_pos_src_;
+}
+
+void RenderingGeometry::MoveAt(const Vector3D& at_shift)
+{
+    at_ = at_ + FastVector3D(at_shift);
     UpdateTransform();
 }
 
-void RenderingGeometry::Move(const Vector3D& mov)
+void RenderingGeometry::MoveCam(const Vector3D& mov)
 {
     camera_pos_src_ = camera_pos_src_ + FastVector3D(mov);
     UpdateTransform();
@@ -79,7 +86,7 @@ void RenderingGeometry::SetLightSrcPos(const Vector3D& pos)
 void RenderingGeometry::SetToPixelsCoeffitients()
 {
     topixels_mul_ = _mm_set_ps(1.f, 1.f, screen_height_ /2.f, screen_width_/2.f);
-    topixels_add_ = _mm_set_ps(0.f, 0.f, (-0.5f + screen_height_/2.f), (-0.5f + screen_width_ /2.f));
+    topixels_add_ = _mm_set_ps(0.f, 0.f, (-0.5f + screen_height_/2.f), (-0.5f + screen_width_/2.f));
 }
 
 void RenderingGeometry::TransformGeometry(const Vector4D& src_vec4, Vertex& out_v) const

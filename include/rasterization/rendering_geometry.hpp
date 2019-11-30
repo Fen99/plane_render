@@ -11,14 +11,17 @@ namespace plane_render {
 struct alignas(16) RenderingGeometry
 {
 public:
-    RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov);
+    RenderingGeometry(ScreenDimension w, ScreenDimension h, float n_p, float f_p, float fov,
+                      const Vector3D& up = {0.f, 1.f, 0.f});
     void* operator new (size_t bytes) { return AlignmentAllocator<RenderingGeometry, 16>().allocate(bytes); }
     void operator delete(void* ptr) { AlignmentAllocator<void, 16>().deallocate(ptr, 0); }
 
-    void Move(const Vector3D& mov);
-    void Rotate(const RotationAngles& rot);
-
-    void LookAt(const Vector3D& pos, const RotationAngles& angles);
+    // pos - позиция камеры
+    // at - в какую точку мы смотрим (какая у нас в центре экрана)
+    // pos - at = dir - вектор направления
+    void MoveCam(const Vector3D& mov); // pos = pos + mov
+    void MoveAt(const Vector3D& at_shift); // at = at + at_shift
+    void LookAt(const Vector3D& pos, const Vector3D& at); // Полностью перезаписывает pos и at
 
     // Вспомогательная функция для преобразований геометрии
     // Переводит экранные координаты (ksi, eta, dzeta) в пиксели и устанавливает их в out_v
@@ -42,15 +45,15 @@ public:
     ScreenDimension Width()  const { return screen_width_;  }
     ScreenDimension Height() const { return screen_height_; }
 
-    const FastVector3D& CameraPosSrc() const { return camera_pos_src_; }
-    const FastVector3D& LightPosSrc()  const { return light_pos_src_;  }
-    const FastVector3D& LightPos()     const { return light_pos_;      }
+    const FastVector3D& CameraPosSrc() const { return camera_pos_src_; } // После преобразования - в (0, 0, 0)
+    const FastVector3D& LightPosSrc()  const { return light_pos_src_;  } // Свет до преобразования
+    const FastVector3D& LightPos()     const { return light_pos_;      } // Свет после преобразования
 
     // Для работы с raytracing
     float GetRatio() const { return ratio_; }
-    float GetFov() const { return fov_; }
-    Vector3D GetUp() const { return UP.ToVector3D(); }
-    Vector3D GetAt() const { return at_; }
+    float GetFov()   const { return fov_; }
+    Vector3D GetUp() const { return up_.ToVector3D(); }
+    Vector3D GetAt() const { return at_.ToVector3D(); }
 
     void SetLightSrcPos(const Vector3D& pos);
 
@@ -59,15 +62,13 @@ private:
     void UpdateTransform(); // Пересчитывает матрицы и свет
 
 private:
-    static const FastVector3D UP;
+    // Положение камеры и вида
+    FastVector3D up_ = {0, 1, 0};
+    FastVector3D at_ = {0, 0, 1}; // Чтобы изначально смотрели вдоль z
+    FastVector3D camera_pos_src_ = {0, 0, 0};
 
-private:
-    // Преобразования геометрии
     Matrix4 perspective_; // Считаем 1 раз
-    Matrix4 rotation_;
     Matrix4 result_space_; // rotation*move
-
-    Vector3D at_; // Для совместимости с raytracing
 
     // Вектора для преобразования экранных координат в пиксельные
     __m128 topixels_mul_;
@@ -75,7 +76,6 @@ private:
 
     FastVector3D light_pos_src_ = {0, 0, 0}; // Исходная
     FastVector3D light_pos_ = {0, 0, 0}; // Повернутая и смещенная
-    FastVector3D camera_pos_src_ = {0, 0, 0}; // Исходная. Повернутая и смещенная смысла не имеет - она (0; 0; 0)
 
     // Геометрия экрана
     ScreenDimension screen_width_ = 0;

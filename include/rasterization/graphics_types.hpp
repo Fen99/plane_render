@@ -3,6 +3,7 @@
 #include "common/aligned_allocator.hpp"
 #include "common/basic_math.hpp"
 #include "common/logger.hpp"
+#include "common/common_graphics.hpp"
 
 #include <functional>
 #include <utility>
@@ -13,51 +14,7 @@
 namespace plane_render {
 
 // Для проверок float-значений на предмет нуля
-constexpr float GraphicsEps = 1e-10;
-
-template<typename T>
-struct Point2D
-{
-    T x;
-    T y;
-};
-
-// Camera rotation
-struct RotationAngles
-{
-    float phi = 0;
-    float theta = 0;
-};
-
-// Screen coordinates (in pixels)
-typedef int ScreenDimension;
-using PixelPoint = Point2D<ScreenDimension>;
-using PixelPointF = Point2D<float>; // Для ускорения некоторых расчетов, храним все равно целые
-
-// Colors
-struct Color // Order for SDL
-{
-public:
-    typedef unsigned char ColorElement;
-
-public:
-    ColorElement A = 0;
-    ColorElement R = 0;
-    ColorElement G = 0;
-    ColorElement B = 0;
-
-public:
-    inline Color operator*(float val) const
-    {
-        return { static_cast<ColorElement>(A*val),
-                 static_cast<ColorElement>(R*val),
-                 static_cast<ColorElement>(G*val),
-                 static_cast<ColorElement>(B*val) };
-    }
-};
-constexpr Color Red   = { 0, 255, 0, 0 };
-constexpr Color Green = { 0, 0, 255, 0 };
-constexpr Color Blue  = { 0, 0, 0, 255 };
+constexpr float GraphicsEps = (float) 1e-10;
 
 // Objects
 using TextureCoords = Point2D<float>;
@@ -157,7 +114,7 @@ public:
         }
         inline bool IsValid() const { return denom_ != 0.f; }
 
-        friend class BaricentricCoords;
+        friend struct BaricentricCoords;
     };
 
 private:
@@ -187,7 +144,7 @@ public:
         v4 = _mm_set_ps(0.f, comp_c, comp_b, 1.f - comp_b - comp_c);
 
         // Проверяем, все ли значения >= 0
-        __m128 comp_raw = _mm_cmplt_ps(v4, _mm_set1_ps(-1e-4));
+        __m128 comp_raw = _mm_cmplt_ps(v4, _mm_set1_ps((float) -1e-4));
         int comp = _mm_movemask_ps(comp_raw);
         if (comp)
         {

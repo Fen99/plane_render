@@ -8,10 +8,9 @@ namespace plane_render {
 class Texture
 {
 private:
-    static constexpr size_t StorageBlockSide = 2; // Храним квадратиками, их сторона
-    static constexpr size_t StorageBlockSize = StorageBlockSide * StorageBlockSide;
+    size_t block_side_ = 0; // Храним квадратиками, их сторона
+    size_t block_size_ = 0;
 
-private:
     Color* texture_ = nullptr;
 
     size_t width_ = 0; // Ширина текстуры
@@ -25,7 +24,7 @@ public:
 
     const Color* GetPixels() const { return texture_; }
 
-    void Load(const std::string& text_name);
+    void Load(const std::string& text_name, size_t block_size = 2);
     operator bool() const { return texture_ != nullptr; }
 
     inline const Color GetPoint(const TextureCoords& coords) const
@@ -36,10 +35,10 @@ public:
         // Точка в большом квадрате. -1 - т.к. нумерация пикселей с 0 по каждой стороне
         Point2D<int> texture_point = { static_cast<int>(coords.x*(width_-1)), static_cast<int>((1-coords.y)*(height_-1)) };
         // Блок с данной точкой
-        size_t block_id = blocks_by_w_*(texture_point.y / StorageBlockSide) + (texture_point.x / StorageBlockSide);
-        size_t pos_in_block = StorageBlockSide*(texture_point.y % StorageBlockSide) + (texture_point.x % StorageBlockSide);
+        size_t block_id = blocks_by_w_*(texture_point.y / block_side_) + (texture_point.x / block_side_);
+        size_t pos_in_block = block_side_*(texture_point.y % block_side_) + (texture_point.x % block_side_);
 
-        const Color& result = texture_[block_id*StorageBlockSize + pos_in_block];
+        const Color& result = texture_[block_id*block_size_ + pos_in_block];
         return result;
     }
 

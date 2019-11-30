@@ -150,7 +150,7 @@ public:
     inline Matrix4 operator*(const Matrix4& m) const
     {
         DCHECK_ALIGNMENT_16;
-        Matrix4 result;
+        Matrix4 result = {};
         for (size_t i = 0; i < 4; i++)
          for (size_t j = 0; j < 4; j++)
              result.rows[i].vals[j] = _mm_cvtss_f32(_mm_dp_ps(rows[i],

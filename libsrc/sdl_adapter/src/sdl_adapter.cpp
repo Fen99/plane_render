@@ -9,34 +9,34 @@
 
 namespace plane_render {
 
-SDLAdapter::SDLAdapter(const RasterizationPipelinePtr& pipeline) :
-        pipeline_(pipeline)
+SDLAdapter::SDLAdapter(const RenderProviderPtr& pipeline) :
+        provider_(pipeline)
 {
     CHECK_SDL(SDL_Init(SDL_INIT_VIDEO) == 0);
 
     CHECK_SDL_NOTNULL(window_ = 
         SDL_CreateWindow("Rasterization", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                         pipeline_->ScreenWidth(), pipeline_->ScreenHeight(), 0));
+                         provider_->ScreenWidth(), provider_->ScreenHeight(), 0));
     CHECK_SDL_NOTNULL(surface_ = SDL_GetWindowSurface(window_));
     CHECK_SDL_NOTNULL(renderer_ = SDL_CreateSoftwareRenderer(surface_));
 
     CHECK_SDL_NOTNULL(buffer_ = 
         SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING,
-                          pipeline_->ScreenWidth(), pipeline_->ScreenHeight()));
+                          provider_->ScreenWidth(), provider_->ScreenHeight()));
 
     DrawScreen();
 }
 
 void SDLAdapter::DrawScreen()
 {
-    pipeline_->Update();
+    provider_->Update();
 
     int* pixels = nullptr;
     int pitch = 0;
     CHECK_SDL_NULL(SDL_LockTexture(buffer_, NULL, (void**)&pixels, &pitch));
 
-    memcpy(pixels, pipeline_->GetPixels(), pipeline_->GetBufferSize());
-    //memcpy(pixels, pipeline_->GetObjects()[0].GetFS()->GetTexture()->GetPixels(), pipeline_->GetBufferSize());
+    memcpy(pixels, provider_->GetPixels(), provider_->GetBufferSize());
+    //memcpy(pixels, provider_->GetObjects()[0].GetFS()->GetTexture()->GetPixels(), provider_->GetBufferSize());
 
     SDL_UnlockTexture(buffer_);
     CHECK_SDL_NULL(SDL_RenderCopy(renderer_, buffer_, NULL, NULL));
@@ -45,7 +45,7 @@ void SDLAdapter::DrawScreen()
 
 void SDLAdapter::MessageLoop()
 {
-    constexpr float speed_rot  = 100; // pix / rad
+    constexpr float speed_rot = 100; // pix / rad
     constexpr float speed_keys_move = 0.1;
     constexpr float mouse_roll_speed = 0.2;
 
@@ -68,7 +68,9 @@ void SDLAdapter::MessageLoop()
                     {
                         if (e.motion.xrel == 0 && e.motion.yrel == 0)
                             continue;
-                        pipeline_->CameraRotate(e.motion.xrel / speed_rot, e.motion.yrel / speed_rot);
+                        float dphi = e.motion.xrel / speed_rot;
+                        float dtheta = e.motion.yrel / speed_rot;
+                        provider_->MoveAt(std::sin(dphi) * std::cos(dtheta), std::sin(dtheta), std::cos(dphi) * std::cos(dtheta));
                         need_redraw = true;
                     }
                     break;
@@ -77,7 +79,7 @@ void SDLAdapter::MessageLoop()
                     switch (e.key.keysym.sym)
                     {
 #define MOVING_EVENT(event_macro, dx, dy, dz) case event_macro: \
-                                                  pipeline_->CameraMove(dx, dy, dz); \
+                                                  provider_->MoveCam(dx, dy, dz); \
                                                   need_redraw = true; \
                                                   break;
                         MOVING_EVENT(SDLK_UP, 0, -speed_keys_move, 0);
@@ -92,9 +94,9 @@ void SDLAdapter::MessageLoop()
 
                 case SDL_MOUSEWHEEL:
                     if (e.wheel.y > 0)
-                        pipeline_->CameraMove(0, 0, -mouse_roll_speed);
+                        provider_->MoveCam(0, 0, -mouse_roll_speed);
                     else
-                        pipeline_->CameraMove(0, 0, mouse_roll_speed);
+                        provider_->MoveCam(0, 0, mouse_roll_speed);
                     need_redraw = true;
                     break;
             }

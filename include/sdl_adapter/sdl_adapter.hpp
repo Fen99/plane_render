@@ -1,7 +1,6 @@
 #pragma once
 
-#include "rasterization/pipeline.hpp"
-
+#include "render_provider.hpp"
 #include <memory>
 
 struct SDL_Window;
@@ -14,7 +13,7 @@ namespace plane_render {
 class SDLAdapter
 {
 public:
-    SDLAdapter(const RasterizationPipelinePtr& pipeline);
+    SDLAdapter(const RenderProviderPtr& pipeline);
     SDLAdapter(const SDLAdapter&) = delete;
     SDLAdapter& operator=(const SDLAdapter&) = delete;
 
@@ -24,7 +23,7 @@ public:
     ~SDLAdapter();
 
 private:
-    RasterizationPipelinePtr pipeline_;
+    RenderProviderPtr provider_;
 
     // Окно для рисования
     SDL_Window* window_;

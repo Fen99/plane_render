@@ -99,8 +99,11 @@ void read_ppm_data(FILE *f, int *img_in, int is_ascii)
 
 } //namespace
 
-void Texture::Load(const std::string& fname)
+void Texture::Load(const std::string& fname, size_t block_side)
 {
+    block_side_ = block_side;
+    block_size_ = block_side_*block_side_;
+
     FILE* ppm_file = fopen(fname.c_str(), "r");
     CHECK(ppm_file);
 
@@ -110,10 +113,10 @@ void Texture::Load(const std::string& fname)
     int is_ascii = 0;
     read_ppm_header(ppm_file, &width, &height, &img_colors, &is_ascii);
     
-    CHECK((width % StorageBlockSide == 0) && (height % StorageBlockSide == 0));
+    CHECK((width % block_side_ == 0) && (height % block_side_ == 0));
     width_ = width;
     height_ = height;
-    blocks_by_w_ = width_ / StorageBlockSide;
+    blocks_by_w_ = width_ / block_side_;
 
     CHECK(img_colors == 255);
     CHECK(is_ascii != 1); // binary file
@@ -122,16 +125,16 @@ void Texture::Load(const std::string& fname)
 
     texture_ = new Color[width_*height_];
 
-    for (size_t block_id = 0; block_id < (width_*height_) / StorageBlockSize; block_id++)
-     for (size_t pos_in_block = 0; pos_in_block < StorageBlockSize; pos_in_block++)
+    for (size_t block_id = 0; block_id < (width_*height_) / block_size_; block_id++)
+     for (size_t pos_in_block = 0; pos_in_block < block_size_; pos_in_block++)
      {
-         Point2D<size_t> pos = { StorageBlockSide*(block_id % blocks_by_w_) + (pos_in_block % StorageBlockSide),
-                                 StorageBlockSide*(block_id / blocks_by_w_) + (pos_in_block / StorageBlockSide) };
+         Point2D<size_t> pos = { block_side_*(block_id % blocks_by_w_) + (pos_in_block % block_side_),
+                                 block_side_*(block_id / blocks_by_w_) + (pos_in_block / block_side_) };
          size_t position = (pos.y*width_ + pos.x)*3;
-         texture_[block_id*StorageBlockSize + pos_in_block].A = 0;
-         texture_[block_id*StorageBlockSize + pos_in_block].R = static_cast<Color::ColorElement>(texture_tmp[position]);
-         texture_[block_id*StorageBlockSize + pos_in_block].G = static_cast<Color::ColorElement>(texture_tmp[position+1]);
-         texture_[block_id*StorageBlockSize + pos_in_block].B = static_cast<Color::ColorElement>(texture_tmp[position+2]);
+         texture_[block_id*block_size_ + pos_in_block].A = 0;
+         texture_[block_id*block_size_ + pos_in_block].R = static_cast<Color::ColorElement>(texture_tmp[position]);
+         texture_[block_id*block_size_ + pos_in_block].G = static_cast<Color::ColorElement>(texture_tmp[position+1]);
+         texture_[block_id*block_size_ + pos_in_block].B = static_cast<Color::ColorElement>(texture_tmp[position+2]);
      }
 
     delete[] texture_tmp;

@@ -1,5 +1,6 @@
 #pragma once
 #include "geom.hpp"
+#include "common/logger.hpp"
 
 struct sphere
 {

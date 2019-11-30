@@ -15,15 +15,16 @@ RasterizationPipeline::RasterizationPipeline(const RenderingGeometryPtr& geom,
     perf_output_(perf_filename, std::ios_base::out)
 {}
 
-void RasterizationPipeline::CameraMove(float dx, float dy, float dz)
+void RasterizationPipeline::MoveCam(float dx, float dy, float dz)
 {
-    geom_->Move({ dx, dy, dz });
+    geom_->MoveCam({ dx, dy, dz });
     Update();
 }
 
-void RasterizationPipeline::CameraRotate(float phi, float theta)
+void RasterizationPipeline::MoveAt(float dx, float dy, float dz)
 {
-    geom_->Rotate({ phi, theta });
+    geom_->MoveAt({ dx, dy, dz });
+    Update();
 }
 
 void RasterizationPipeline::Update()
@@ -65,6 +66,7 @@ void RasterizationPipeline::Update()
     auto const t1 = std::chrono::system_clock::now();
     std::chrono::duration<double, std::milli> const fs = t1 - tv;
     perf_output_ << (vs+fs).count() << "\t" << vs.count() << "\t" << fs.count() << std::endl;
+    LOG(INFO) << (vs+fs).count() << "\t" << vs.count() << "\t" << fs.count() << std::endl;
 }
 
 } // namespace plane_render
